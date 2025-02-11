@@ -21,7 +21,6 @@ class Jugador(models.Model):
     usuario = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=15)
     apellido = models.CharField(max_length=15)
-    fecha_nacimiento = models.DateField(null=True, blank=True)
     posicion_favorita = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
     liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")  # Liga a la que pertenece
 

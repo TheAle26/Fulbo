@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Unirse a la liga "{{ liga.nombre }}"</h2>
+
+{% if jugadores_disponibles %}
+    <h3>Elige uno de los jugadores disponibles:</h3>
+    <form method="post">
+        {% csrf_token %}
+        <ul class="list-group">
+            {% for jugador in jugadores_disponibles %}
+                <li class="list-group-item">
+                    <input type="radio" name="jugador_id" value="{{ jugador.id }}" id="jugador_{{ jugador.id }}">
+                    <label for="jugador_{{ jugador.id }}">
+                        {{ jugador.nombre }} {{ jugador.apellido }}
+                    </label>
+                </li>
+            {% endfor %}
+        </ul>
+        <button type="submit" class="btn btn-primary mt-3">Unirme con este jugador</button>
+    </form>
+{% else %}
+    <p>No hay jugadores pre-creados disponibles en esta liga.</p>
+{% endif %}
+
+<hr>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" name="crear_nuevo" class="btn btn-secondary">
+        Crear un nuevo jugador
+    </button>
+</form>
+
+{% endblock %}

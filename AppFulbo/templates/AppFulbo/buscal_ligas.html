@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Buscar Ligas</h2>
+
+<form method="get" action="{% url 'buscar_ligas' %}">
+    <div class="form-group">
+        <input type="text" name="q" class="form-control" placeholder="Buscar ligas..." value="{{ query }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Buscar</button>
+</form>
+
+<hr>
+
+{% if ligas %}
+    <ul class="list-group">
+        {% for liga in ligas %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ liga.nombre }}</strong>
+                    {% if liga.descripcion %}
+                        <p>{{ liga.descripcion }}</p>
+                    {% endif %}
+                </div>
+                <!-- Formulario para solicitar unirse a la liga -->
+                <form method="post" action="{% url 'solicitar_unirse' liga.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Solicitar unirme</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No se encontraron ligas.</p>
+{% endif %}
+
+{% endblock %}

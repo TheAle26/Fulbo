@@ -2,6 +2,7 @@ from django import forms
 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from .models import Jugador
 
 
 # class Restaurante_form(forms.Form):
@@ -43,10 +44,13 @@ class UserRegisterForm(UserCreationForm):
 
     password1 = forms.CharField(label="Contraseña", widget=forms.PasswordInput)
     password2 = forms.CharField(label="Repetir contraseña", widget=forms.PasswordInput)
-
+    fecha_nacimiento = forms.DateField(required=False)
+    widgets = {
+        'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}),
+        }
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'password1', 'password2', 'last_name', 'first_name']
+        fields = ['username', 'first_name', 'last_name', 'password1', 'password2', 'last_name', 'first_name','fecha_nacimiento']
         help_texts = {k: "" for k in fields}
 
 
@@ -63,3 +67,10 @@ class UserEditForm(forms.ModelForm):
         model = User
         fields = ['email', 'password1', 'password2', 'last_name', 'first_name']
         help_texts = {k: "" for k in fields}
+
+
+
+class JugadorForm(forms.ModelForm):
+    class Meta:
+        model = Jugador
+        fields = ['usuario', 'nombre', 'apellido', 'posicion_favorita', 'liga']

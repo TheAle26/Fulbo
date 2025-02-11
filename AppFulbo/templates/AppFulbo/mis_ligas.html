@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Mis Ligas</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Liga</th>
+                <th>Mi Jugador</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for liga in ligas %}
+            <tr>
+                <td>{{ liga.nombre }}</td>
+                <td>{{ liga.mi_jugador.nombre }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2">No estás en ninguna liga.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
