@@ -14,7 +14,7 @@ def inicio(request):
 #login y logout
 def register(request):
     if request.method == 'POST':
-        formulario = AppResto.forms.UserRegisterForm(request.POST)
+        formulario = AppFulbo.forms.UserRegisterForm(request.POST)
 
         if formulario.is_valid():
             user = formulario.save()
@@ -24,7 +24,7 @@ def register(request):
                 login(request, authenticated_user)
                 return redirect('inicio')  # Redirect to the appropriate URL after registration
     else:
-        formulario = AppResto.forms.UserRegisterForm()
+        formulario = AppFulbo.forms.UserRegisterForm()
 
     return render(request, "registro/register.html", {"formulario": formulario})
 
@@ -62,7 +62,7 @@ def edit_Profile(request):
 
     if request.method == 'POST':
 
-        miFormulario = AppResto.forms.UserEditForm(request.POST)
+        miFormulario = AppFulbo.forms.UserEditForm(request.POST)
 
         if miFormulario.is_valid():
 
@@ -80,6 +80,5 @@ def edit_Profile(request):
 
     else:
 
-        miFormulario = AppResto.forms.UserEditForm(initial={'email': usuario.email,'password':usuario.password,'last_name':usuario.last_name,'first_name':usuario.first_name})
+        miFormulario = AppFulbo.forms.UserEditForm(initial={'email': usuario.email,'password':usuario.password,'last_name':usuario.last_name,'first_name':usuario.first_name})
 
-   
