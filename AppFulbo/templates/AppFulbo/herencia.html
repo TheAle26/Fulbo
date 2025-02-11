@@ -19,9 +19,29 @@
         <link href="{% static 'AppFulbo/css/styles.css' %}"rel="stylesheet" />
     </head>
     <body>
-            <!-- Navigation-->
+        <!-- Navigation-->
         <nav class="navbar navbar-light bg-light static-top">
+            <div class="container">
+                {% block botones %}
 
+                {% endblock %}
+                {% if request.path == '/AppFulbo/user/' %}
+                <div class="btn-group">
+                    <a class="btn btn-outline-success" href="{% url 'edit_Profile' %}">Editar</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger" type="submit">Logout</button>
+                    </form>
+                
+                 <!-- <a class="btn btn-outline-danger "href="{% url 'logout' %}">Logout</a>-->
+                </div>
+                {% elif user.is_authenticated %}
+                <a class="btn btn-outline-success" href="{% url 'user' %}"> {{ request.user.username }}</a>
+{% else %}
+    <a class="btn btn-primary" href="{% url 'iniciar_sesion' %}">Iniciar Sesion</a>
+    
+{% endif %}
+                </div>
                
             </div>
         </nav> 
@@ -46,10 +66,7 @@
 {%block sobremi%}
 
 {%endblock%}
-<a class="btn btn-secondary" >No tienes una cuenta? Unete aqui!</a>
         </boddy>
         </html>
 
-{% comment %} 
-        <a class="navbar-brand" href="{% url 'Restos' %}">Restaurantes</a>
-        <a class="navbar-brand" href="{% url 'reseñas' %}">Reseñas</a> {% endcomment %}
+

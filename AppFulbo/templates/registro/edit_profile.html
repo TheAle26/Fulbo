@@ -1,0 +1,34 @@
+{% extends 'AppFulbo/herencia.html' %}
+{% load static %}
+
+{% block muestra %}
+
+    <!--Aquí va lo que cambia, y lo asociado a está vista :) -->
+    <h1>Formulario - Editar Perfil</h1>
+    <h1>De {{usuario}}</h1>
+    
+
+    <form action="" method="POST">{% csrf_token %}
+
+        <!-- Acá está la magia de Django-->
+        
+        <table>
+
+            {{ miFormulario.as_table }}
+
+        </table>
+
+        <input type="submit", value="Enviar">
+
+    </form>  
+
+{% endblock %}
+
+{% block botones %}
+
+<a class="navbar-brand" href="{% url 'Restos' %}">Restaurantes</a>
+<a class="navbar-brand" href="{% url 'reseñas' %}">Reseñas</a>
+<a class="btn btn-outline-danger" href="{% url 'user' %}">Salir</a>
+<!-- poner que si inicie sesion aparezca mi nombre-->
+{% endblock %}
+

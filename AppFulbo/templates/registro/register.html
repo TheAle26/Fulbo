@@ -1,0 +1,29 @@
+{% extends 'AppFulbo/herencia.html' %}
+{% load static %}
+
+{% block muestra %}
+<h1 class="mb-5"> Hola, bienvenido al sitio!
+</h1>
+ 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cree su cuenta</title>
+</head>
+<body>
+    {{mensaje}}
+    <form action="" method="post" > {% csrf_token %}
+
+        
+        {{ formulario.as_p }}
+
+        <input type="submit" value="Registrarse">
+    </form>
+
+{% endblock %}
+
+{% block botones %}
+
+<a class="navbar-brand" href="{% url 'Restos' %}">Restaurantes</a>
+<a class="navbar-brand" href="{% url 'reseñas' %}">Reseñas</a>
+{% endblock %}
