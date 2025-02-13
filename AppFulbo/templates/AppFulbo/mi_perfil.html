@@ -1,0 +1,54 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Mi Perfil</h2>
+    
+    <!-- Información básica del usuario -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{ user.username }}</h5>
+            <p class="card-text">
+                <strong>Nombre:</strong> {{ user.first_name }}<br>
+                <strong>Apellido:</strong> {{ user.last_name }}<br>
+                <strong>Email:</strong> {{ user.email }}<br>
+                <strong>Fecha de registro:</strong> {{ user.date_joined|date:"d/m/Y" }}<br>
+            </p>
+        </div>
+    </div>
+    <a href="{% url 'edit_Profile' %}" class="btn btn-warning">
+        <i class="fa-solid fa-pencil"></i> Editar perfil
+    </a>
+    <br></br>
+    <!-- Ligas a las que pertenece el usuario y puntaje en cada una -->
+    <h3>Mis Ligas y Puntajes</h3>
+    {% if jugadores %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Liga</th>
+                <th>Jugador</th>
+                <th>Puntaje Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jugador in jugadores %}
+            <tr>
+                <td>{{ jugador.liga }}</td>
+                <td>{{ jugador.nombre }} {{ jugador.apellido }}</td>
+                <td>
+                    {% if jugador.total_puntaje %}
+                        {{ jugador.total_puntaje }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No tienes ligas asociadas.</p>
+    {% endif %}
+</div>
+{% endblock %}

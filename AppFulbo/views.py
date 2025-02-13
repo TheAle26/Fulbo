@@ -1,5 +1,4 @@
 from django.shortcuts import render, get_object_or_404, redirect
-# from AppFulbo.models import
 from django.http import HttpResponse, HttpResponseBadRequest
 import datetime
 import AppFulbo.forms 
@@ -8,16 +7,26 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from .forms import JugadorForm
 from .models import *
-from .models import Liga, Jugador
+from .models import Liga, Jugador,PuntajePartido
 from django.contrib import messages
+from django.db.models import Sum
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from datetime import date
+
+def calcular_edad(fecha_nacimiento):
+    today = date.today()
+    edad = today.year - fecha_nacimiento.year
+    # Resta uno si todavía no cumplió años este año
+    if (today.month, today.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
+        edad -= 1
+    return edad
 
 # Create your views here.
 def inicio(request):
     return render(request,"AppFulbo/inicio.html") #como tercer argumento le tengo que pasar en forma de diccionario la info
 
-def mi_usuario(request):
-    
-    return render(request,"AppFulbo/mi_.html")
 
 #login y logout
 def register(request):
@@ -62,33 +71,36 @@ def login_request(request):
 
     return render(request, "registro/login.html", {"formulario": formulario})
 
+@login_required
+def custom_logout(request):
+    logout(request)
+    return redirect('inicio')
+
 #editar usuario
 @login_required
-def edit_Profile(request):
-
+def edit_profile(request):
     usuario = request.user
 
     if request.method == 'POST':
-
-        miFormulario = AppFulbo.forms.UserEditForm(request.POST)
-
+        # Usamos el formulario con instance para actualizar el usuario
+        miFormulario = AppFulbo.forms.UserEditForm(request.POST, instance=usuario)
         if miFormulario.is_valid():
+            # Guardamos los cambios en los datos básicos (email, first_name, last_name)
+            usuario = miFormulario.save(commit=False)
 
-            informacion = miFormulario.cleaned_data
-
-            usuario.email = informacion['email']
-            usuario.password1 = informacion['password1']
-            usuario.password2 = informacion['password2']
-            usuario.last_name = informacion['last_name']
-            usuario.first_name = informacion['first_name']
+            # Si el formulario incluye campos de contraseña y se rellenaron, actualizamos la contraseña
+            password1 = miFormulario.cleaned_data.get('password1')
+            password2 = miFormulario.cleaned_data.get('password2')
+            if password1 and password1 == password2:
+                usuario.set_password(password1)
 
             usuario.save()
 
             return redirect('inicio')
-
     else:
+        miFormulario = AppFulbo.forms.UserEditForm(instance=usuario)
 
-        miFormulario = AppFulbo.forms.UserEditForm(initial={'email': usuario.email,'password':usuario.password,'last_name':usuario.last_name,'first_name':usuario.first_name})
+    return render(request, 'registro/edit_profile.html', {'form': miFormulario})
 
 
 @login_required
@@ -126,7 +138,7 @@ def buscar_ligas(request):
         'ligas': ligas,
         'query': query,
     }
-    return render(request, 'buscar_ligas.html', context)
+    return render(request, 'AppFulbo/buscar_ligas.html', context)
 
 
 @login_required
@@ -221,3 +233,28 @@ def crear_jugador(request, liga_id):
         'liga': liga,
     }
     return render(request, "crear_jugador.html", context)
+
+
+@login_required
+def partidos_jugados(request):
+    # Filtramos todos los registros de PuntajePartido de los jugadores del usuario
+    puntajes = PuntajePartido.objects.filter(
+        jugador__usuario=request.user
+    ).select_related('partido', 'partido__liga', 'jugador').order_by('-partido__fecha_partido')
+    
+    context = {
+        'puntajes': puntajes,
+    }
+    return render(request, 'AppFulbo/mis_partidos.html', context)
+
+@login_required
+def mi_perfil(request):
+    user = request.user
+    # Se filtran los jugadores del usuario y se anota el puntaje total (suma de puntajes en cada partido)
+    jugadores = Jugador.objects.filter(usuario=user).annotate(total_puntaje=Sum('puntajes_partidos__puntaje'))
+    
+    context = {
+        'user': user,
+        'jugadores': jugadores,
+    }
+    return render(request, 'AppFulbo/mi_perfil.html', context)

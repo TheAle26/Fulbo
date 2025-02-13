@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'AppFulbo/base.html' %}
 
 {% block content %}
 <div class="container mt-4">
@@ -14,7 +14,14 @@
             {% for liga in ligas %}
             <tr>
                 <td>{{ liga.nombre }}</td>
-                <td>{{ liga.mi_jugador.nombre }}</td>
+                <td>
+                    {{ liga.mi_jugador.nombre }} {{ liga.mi_jugador.apellido }}
+                    {% if liga.mi_jugador.puntaje %}
+                        - Puntaje: {{ liga.mi_jugador.puntaje }}
+                    {% else %}
+                        - Puntaje: N/A
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
@@ -25,3 +32,4 @@
     </table>
 </div>
 {% endblock %}
+

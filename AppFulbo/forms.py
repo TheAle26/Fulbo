@@ -1,8 +1,8 @@
 from django import forms 
-
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Jugador
+from django.contrib.auth import get_user_model
 
 
 # class Restaurante_form(forms.Form):
@@ -37,36 +37,63 @@ from .models import Jugador
 
 
 class UserRegisterForm(UserCreationForm):
-    username = forms.CharField(label="Nombre de usuario")  # Cambié 'usuario' a 'username'
-    # email = forms.EmailField(label="Correo electrónico")
+    username = forms.CharField(label="Nombre de usuario")
     first_name = forms.CharField(label="Nombre")
     last_name = forms.CharField(label="Apellido")
-
+    email = forms.EmailField(label='Email')
     password1 = forms.CharField(label="Contraseña", widget=forms.PasswordInput)
     password2 = forms.CharField(label="Repetir contraseña", widget=forms.PasswordInput)
-    fecha_nacimiento = forms.DateField(required=False)
-    widgets = {
-        'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}),
-        }
+    # fecha_nacimiento = forms.DateField(
+    #     required=False,
+    #     widget=forms.DateInput(attrs={'type': 'date'})
+    # )
+    
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'password1', 'password2', 'last_name', 'first_name','fecha_nacimiento']
+        fields = [
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'password1',
+            'password2',
+            # 'fecha_nacimiento'
+        ]
         help_texts = {k: "" for k in fields}
 
 
 
-# Clase 24, agregamos el UserEditForm
+
+User = get_user_model()
+
 class UserEditForm(forms.ModelForm):
-    email = forms.EmailField(label='Correo electrónico')
-    password1 = forms.CharField(label='Contraseña', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='Repetir contraseña', widget=forms.PasswordInput)
-    last_name = forms.CharField(label='Apellido')
-    first_name = forms.CharField(label='Nombre')
+    # Los campos de contraseña son opcionales para no forzar su cambio
+    password1 = forms.CharField(label='Nueva Contraseña', widget=forms.PasswordInput, required=False)
+    password2 = forms.CharField(label='Repetir Nueva Contraseña', widget=forms.PasswordInput, required=False)
 
     class Meta:
         model = User
-        fields = ['email', 'password1', 'password2', 'last_name', 'first_name']
+        fields = [ 'first_name', 'last_name','email']
         help_texts = {k: "" for k in fields}
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get("password1")
+        p2 = cleaned_data.get("password2")
+        # Si se ingresó alguna contraseña, ambas deben coincidir
+        if p1 or p2:
+            if p1 != p2:
+                raise forms.ValidationError("Las contraseñas no coinciden.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        password = self.cleaned_data.get('password1')
+        if password:
+            user.set_password(password)
+        if commit:
+            user.save()
+        return user
 
 
 

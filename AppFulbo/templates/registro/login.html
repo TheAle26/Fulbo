@@ -1,7 +1,6 @@
-{% extends 'AppFulbo/herencia.html' %}
-{% load static %}
+{% extends 'AppFulbo/base.html' %}
 
-{% block muestra %}
+{% block content %}
 <h1 class="mb-5"> Bienvenido devuelta!
 </h1>
  
@@ -19,12 +18,7 @@
 
         <input type="submit" value="Iniciar sesion">
     </form>
+    <br> </br>
     <a class="btn btn-secondary" href="{% url 'register' %}">No tienes una cuenta? Unete aqui!</a>
 {% endblock %}
 
-{% block botones %}
-
-{% comment %} <a class="navbar-brand" href="{% url 'Restos' %}">Restaurantes</a>
-<a class="navbar-brand" href="{% url 'reseñas' %}">Reseñas</a> {% endcomment %}
-<!-- poner que si inicie sesion aparezca mi nombre-->
-{% endblock %}
