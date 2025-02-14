@@ -15,14 +15,13 @@ class Jugador(models.Model):
         ('4', 'Delantero'),
     ]
     usuario = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
-    nombre = models.CharField(max_length=15)
-    apellido = models.CharField(max_length=15)
-    posicion_favorita = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
+    apodo = models.CharField(max_length=15)
+    posicion = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
     liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")  # Liga a la que pertenece
 
 
     def __str__(self):
-        return f"{self.nombre} {self.apellido} en liga "
+        return f"{self.apodo} en liga {self.liga}"
 
 class Partido(models.Model):
     fecha_partido = models.DateField(null=True, blank=True)
@@ -39,9 +38,6 @@ class PuntajePartido(models.Model):
 
     def __str__(self):
         return f"{self.jugador} - {self.partido}: {self.puntaje}"
-    
-
-    
 
 # partido = Partido.objects.get(id=1)  # Obtiene un partido específico
 # puntajes = partido.puntajes_partidos.all()  # Obtiene todos los puntajes del partido

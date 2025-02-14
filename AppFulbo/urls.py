@@ -12,10 +12,9 @@ urlpatterns = [
     
     path('ligas/buscar/', views.buscar_ligas, name='buscar_ligas'),
     path('ligas/unirse/<int:liga_id>/', views.solicitar_unirse, name='solicitar_unirse'),
-    path('ligas/unirse/<int:liga_id>/', views.elegir_o_crear_jugador, name='elegir_o_crear_jugador'),
-    # Asumiendo que ya tengas definida la vista mis_ligas y crear_jugador:
     path('mis_ligas/',views.mis_ligas, name='mis_ligas'),
     path('jugador/crear/<int:liga_id>/', views.crear_jugador, name='crear_jugador'),
-
+    path('ligas/crear/', views.crear_liga, name='crear_liga'),
+    path('ligas/<int:liga_id>/', views.ver_liga, name='ver_liga'),
     path('mis_partidos/', views.partidos_jugados, name='mis_partidos'),
 ]

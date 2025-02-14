@@ -5,7 +5,7 @@ import AppFulbo.forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
-from .forms import JugadorForm
+from .forms import JugadorForm,LigaForm,MiJugadorForm
 from .models import *
 from .models import Liga, Jugador,PuntajePartido
 from django.contrib import messages
@@ -130,7 +130,7 @@ def buscar_ligas(request):
     """
     query = request.GET.get('q', '')
     if query:
-        ligas = Liga.objects.filter(nombre__icontains=query)
+        ligas = Liga.objects.filter(nombre_liga__icontains=query)
     else:
         ligas = Liga.objects.all()
     
@@ -232,7 +232,7 @@ def crear_jugador(request, liga_id):
         'form': form,
         'liga': liga,
     }
-    return render(request, "crear_jugador.html", context)
+    return render(request, "registro/crear_jugador.html", context)
 
 
 @login_required
@@ -258,3 +258,32 @@ def mi_perfil(request):
         'jugadores': jugadores,
     }
     return render(request, 'AppFulbo/mi_perfil.html', context)
+
+@login_required
+def crear_liga(request):
+    if request.method == 'POST':
+        form_liga = LigaForm(request.POST)
+        form_jugador = MiJugadorForm(request.POST)  # ya no necesitamos pasar el usuario para filtrar la liga
+        if form_liga.is_valid() and form_jugador.is_valid():
+            nueva_liga = form_liga.save()
+            nuevo_jugador = form_jugador.save(commit=False)
+            nuevo_jugador.usuario = request.user
+            nuevo_jugador.liga = nueva_liga  # Asigna manualmente la liga recién creada
+            nuevo_jugador.save()
+            messages.success(request, "Liga y jugador creados exitosamente.")
+            return redirect('ver_liga', liga_id=nueva_liga.id)
+    else:
+        form_liga = LigaForm()
+        form_jugador = MiJugadorForm()
+    return render(request, 'registro/crear_liga.html', {'form_liga': form_liga, 'form_jugador': form_jugador})
+
+def ver_liga(request, liga_id):
+    liga = get_object_or_404(Liga, id=liga_id)
+    mi_jugador = None
+    if request.user.is_authenticated:
+        mi_jugador = liga.jugadores.filter(usuario=request.user).first()
+    context = {
+        'liga': liga,
+        'mi_jugador': mi_jugador,
+    }
+    return render(request, 'AppFulbo/ver_liga.html', context)

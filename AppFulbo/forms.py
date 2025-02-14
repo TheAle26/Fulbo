@@ -1,7 +1,7 @@
 from django import forms 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Jugador
+from .models import Jugador, Liga
 from django.contrib.auth import get_user_model
 
 
@@ -100,4 +100,42 @@ class UserEditForm(forms.ModelForm):
 class JugadorForm(forms.ModelForm):
     class Meta:
         model = Jugador
-        fields = ['usuario', 'nombre', 'apellido', 'posicion_favorita', 'liga']
+        fields = ['usuario', 'apodo', 'posicion', 'liga']
+
+
+class LigaForm(forms.ModelForm):
+    class Meta:
+        model = Liga
+        fields = ['nombre_liga']
+        labels = {
+            'nombre_liga': 'Nombre de la Liga'
+        }
+        help_texts = {
+            'nombre_liga': 'Ingrese un nombre único para la liga.'
+        }
+        error_messages = {
+            'nombre_liga': {
+                'unique': "Ya existe una liga con este nombre. Por favor, elige otro nombre.",
+            },
+        }
+        
+
+class MiJugadorForm(forms.ModelForm):
+    class Meta:
+        model = Jugador
+        # Excluimos el campo 'liga' para que no se muestre en el formulario
+        fields = ['apodo', 'posicion']
+        labels = {
+            'apodo': 'Apodo',
+            'posicion': 'Posición',
+        }
+
+    # def __init__(self, *args, **kwargs):
+    #     # Se espera recibir el usuario logueado para filtrar las ligas
+    #     user = kwargs.pop('user', None)
+    #     super().__init__(*args, **kwargs)
+    #     if user:
+    #         # Obtener los IDs de las ligas en las que el usuario ya tiene un jugador.
+    #         user_league_ids = Jugador.objects.filter(usuario=user).values_list('liga', flat=True)
+    #         # Filtrar el queryset del campo liga para excluir esas ligas.
+    #         self.fields['liga'].queryset = Liga.objects.exclude(id__in=user_league_ids)
