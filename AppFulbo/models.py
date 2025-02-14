@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User  # Modelo de usuario predeterminado de Django
-
+from django.conf import settings
     
 class Liga(models.Model):
     nombre_liga= models.CharField(max_length=15,unique=True)
@@ -14,7 +14,7 @@ class Jugador(models.Model):
         ('3', 'Mediocampista'),
         ('4', 'Delantero'),
     ]
-    usuario = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE) 
     apodo = models.CharField(max_length=15)
     posicion = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
     liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")  # Liga a la que pertenece
