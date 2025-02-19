@@ -1,7 +1,7 @@
 from django import forms 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Jugador, Liga
+from .models import Jugador, Liga,Partido
 from django.contrib.auth import get_user_model
 
 
@@ -13,21 +13,6 @@ from django.contrib.auth import get_user_model
 #     instagram = forms.URLField()
 #     foto=forms.ImageField()
     
-#     def clean_foto(self):
-#         foto = self.cleaned_data.get('foto')
-#         if foto:
-#             # Aquí puedes agregar validaciones adicionales para la imagen si es necesario
-#             pass
-#         return foto
-
-# class Reseña_form(forms.Form):
-#     restaurante = forms.ModelChoiceField(queryset=Restaurante.objects.all(), empty_label=None, to_field_name="nombre", widget=forms.Select(attrs={'class': 'form-control'})) #quiero que sea una lista despegable de los que ya existen
-#     puntuacion = forms.FloatField(min_value=0,max_value=5) 
-#     #ubicacion = forms.CharField(max_length=250)
-#     fecha_de_visita=forms.DateField()
-#     reseña=forms.CharField(max_length=150)
-#     foto=forms.ImageField()
-
 #     def clean_foto(self):
 #         foto = self.cleaned_data.get('foto')
 #         if foto:
@@ -100,15 +85,45 @@ class UserEditForm(forms.ModelForm):
 class JugadorForm(forms.ModelForm):
     class Meta:
         model = Jugador
-        fields = ['usuario', 'apodo', 'posicion', 'liga']
+        # No incluimos el campo 'liga' porque se asignará manualmente en la vista.
+        fields = ['apodo', 'posicion']
+        labels = {
+            'apodo': 'Apodo',
+            'posicion': 'Posición',
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Se espera recibir la instancia de la liga como argumento para filtrar el apodo.
+        self.liga = kwargs.pop('liga', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_apodo(self):
+        apodo = self.cleaned_data.get('apodo')
+        # Verifica si ya existe un jugador con este apodo en la liga actual.
+        if self.liga and Jugador.objects.filter(apodo__iexact=apodo, liga=self.liga).exists():
+            raise forms.ValidationError("Este apodo ya existe en esta liga. Por favor, elige otro.")
+        return apodo
+    
+    help_texts = {
+            'apodo': 'Ingrese un apodo único en la liga.'
+        }
+    error_messages = {
+            'apodo': {
+                'unique': "Ya existe este apodo en esta liga.",
+            },
+        }
 
 
 class LigaForm(forms.ModelForm):
     class Meta:
         model = Liga
-        fields = ['nombre_liga']
+        fields = ['nombre_liga','descripcion']
         labels = {
-            'nombre_liga': 'Nombre de la Liga'
+            'nombre_liga': 'Nombre de la liga',
+            'descripcion': 'Descripccion de la liga'
+        }
+        widgets = {
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción'}),
         }
         help_texts = {
             'nombre_liga': 'Ingrese un nombre único para la liga.'
@@ -118,24 +133,56 @@ class LigaForm(forms.ModelForm):
                 'unique': "Ya existe una liga con este nombre. Por favor, elige otro nombre.",
             },
         }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields.pop('nombre_liga', None)
+
         
 
-class MiJugadorForm(forms.ModelForm):
-    class Meta:
-        model = Jugador
-        # Excluimos el campo 'liga' para que no se muestre en el formulario
-        fields = ['apodo', 'posicion']
-        labels = {
-            'apodo': 'Apodo',
-            'posicion': 'Posición',
-        }
+class MiJugadorForm(JugadorForm):
+    class Meta(JugadorForm.Meta):
+        # Por ejemplo, podrías agregar o modificar campos, si fuera necesario.
+        pass
 
-    # def __init__(self, *args, **kwargs):
-    #     # Se espera recibir el usuario logueado para filtrar las ligas
-    #     user = kwargs.pop('user', None)
-    #     super().__init__(*args, **kwargs)
-    #     if user:
-    #         # Obtener los IDs de las ligas en las que el usuario ya tiene un jugador.
-    #         user_league_ids = Jugador.objects.filter(usuario=user).values_list('liga', flat=True)
-    #         # Filtrar el queryset del campo liga para excluir esas ligas.
-    #         self.fields['liga'].queryset = Liga.objects.exclude(id__in=user_league_ids)
+
+    def __init__(self, *args, **kwargs):
+        # Se espera recibir el usuario logueado para filtrar las ligas
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            # Obtener los IDs de las ligas en las que el usuario ya tiene un jugador.
+            user_league_ids = Jugador.objects.filter(usuario=user).values_list('liga', flat=True)
+           # Filtrar el queryset del campo liga para excluir esas ligas.
+            self.fields['liga'].queryset = Liga.objects.exclude(id__in=user_league_ids)
+
+
+
+
+class PartidoForm(forms.ModelForm):
+    # Campo adicional para seleccionar los jugadores de la liga que participaron.
+    jugadores = forms.ModelMultipleChoiceField(
+        queryset=None,  # Lo definiremos en __init__
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Jugadores que participaron"
+    )
+    
+    class Meta:
+        model = Partido
+        fields = ['fecha_partido', 'cancha']
+        labels = {
+            'fecha_partido': 'Fecha del partido',
+            'cancha': 'Cancha',
+        }
+        widgets = {
+            'fecha_partido': forms.DateInput(attrs={'type': 'date'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        # Esperamos recibir la instancia de la liga (league) para filtrar los jugadores.
+        league = kwargs.pop('league', None)
+        super().__init__(*args, **kwargs)
+        if league:
+            # El queryset del campo 'jugadores' se limita a los jugadores de esa liga.
+            self.fields['jugadores'].queryset = league.jugadores.all()

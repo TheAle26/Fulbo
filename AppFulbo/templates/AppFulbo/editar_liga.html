@@ -1,0 +1,125 @@
+{% extends 'AppFulbo/base.html' %}
+{% comment %} {% if request.user in liga.presidentes.all %}
+<a class="btn btn-success" href="{% url 'crear_jugador' liga.id %}">
+    <i class="fa-solid fa-plus"></i> Agregar Jugador
+
+</a>
+{% endif %} {% endcomment %}
+
+
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Editar Liga: <td><a href="{% url 'ver_liga' liga.id %}">{{ liga.nombre_liga }}</a></td></h2>
+    
+    <!-- Formulario para editar datos de la liga (nombre, descripción) -->
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="hidden" name="action" value="editar_liga">
+        <button type="submit" class="btn btn-primary">Guardar cambios de descripccion</button>
+    </form>
+    
+    <hr>
+    {% if request.user == liga.super_presidente %}
+    <h3>Presidentes</h3>
+    <!-- Listado de presidentes -->
+    <ul class="list-group">
+        {% for presidente in presidentes %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ presidente.username }}
+            <!-- Botón para eliminar presidente -->
+            <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_president">
+                <input type="hidden" name="presidente_id" value="{{ presidente.id }}">
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar este presidente?')">Eliminar</button>
+            </form>
+        </li>
+        {% empty %}
+        <li class="list-group-item">No hay presidentes asignados.</li>
+        {% endfor %}
+    </ul>
+    <!-- Formulario para agregar un presidente -->
+    <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_president">
+        <div class="input-group">
+            <input type="text" name="nuevo_presidente" class="form-control" placeholder="Username del nuevo presidente">
+            <button type="submit" class="btn btn-success">Agregar Presidente</button>
+        </div>
+    </form>
+    {% endif %}
+    <hr>
+    <h3>Jugadores</h3>
+    <div class="row">
+        {% for jugador in jugadores %}
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ jugador.apodo }}</h5>
+                    <p class="card-text">
+                        Posición: {{ jugador.get_posicion_display }}
+                    </p>
+                    <div class="btn-group">
+                        <!-- Botón editar jugador -->
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit_player">
+                            <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
+                            <button type="submit" class="btn btn-warning btn-sm">Editar</button>
+                        </form>
+                        <!-- Botón eliminar jugador -->
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_player">
+                            <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar este jugador?')">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No hay jugadores registrados.</p>
+        {% endfor %}
+    </div>
+    
+    <hr>
+    <h3>Partidos</h3>
+    <div class="row">
+        {% for partido in partidos %}
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Partido del {{ partido.fecha_partido|date:"d/m/Y" }}</h5>
+                    <p class="card-text">
+                        Cancha: {{ partido.cancha }}
+                    </p>
+                    <div class="btn-group">
+                        <!-- Botón editar partido -->
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit_match">
+                            <input type="hidden" name="partido_id" value="{{ partido.id }}">
+                            <button type="submit" class="btn btn-warning btn-sm">Editar</button>
+                        </form>
+                        <!-- Botón eliminar partido -->
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_match">
+                            <input type="hidden" name="partido_id" value="{{ partido.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar este partido?')">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No hay partidos registrados en esta liga.</p>
+        {% endfor %}
+    </div>
+    
+</div>
+{% endblock %}

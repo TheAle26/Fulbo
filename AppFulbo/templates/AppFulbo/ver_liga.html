@@ -2,8 +2,16 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Información de la Liga</h2>
-    <p><strong>Nombre de la Liga:</strong> {{ liga.nombre_liga }}</p>
+    <h1><strong> {{ liga }}:</strong></h1>
+    {%if liga.descripcion%}
+    <h3>{{ liga.descripcion }}</h3>
+    {%endif%}
+    <h5>Presidentes de la Liga</h5>
+<ul>
+    {% for presidente in liga.presidentes.all %}
+        <li>{{ presidente.username }}</li>
+    {% endfor %}
+</ul>
     <div class="row">
         {% if mi_jugador %}
         <div class="col-md-3 mb-3">
@@ -24,44 +32,69 @@
         <p>No tienes jugador asociado a esta liga.</p>
         {% endif %}
     </div>
-
+    {% if request.user in liga.presidentes.all %}
+    <a class="btn btn-success" href="{% url 'editar_liga' liga.id %}">
+        <i class="fa-solid fa-pencil"></i>Editar Liga
+    </a>
+    {% endif %}
     <!-- Sección de Jugadores de la Liga -->
-    <h3>Jugadores de la Liga</h3>
     <div class="row">
-        {% for jugador in liga.jugadores.all %}
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ jugador.apodo }}</h5>
-                        <p class="card-text">
-                            Posición: {{ jugador.get_posicion_display }}
-                        </p>
+        <!-- Columna para Jugadores -->
+        <div class="col-md-6">
+            <h3>Jugadores de la Liga</h3>
+            <br></br>
+            <div class="row">
+                {% for jugador in liga.jugadores.all %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ jugador.apodo }}
+                                    <span class="card-text"> {{ jugador.puntaje }}</span>
+                                </h5>
+                                <p class="card-text">
+                                    Posición: {{ jugador.get_posicion_display }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                {% empty %}
+                    <p>No hay jugadores asociados a esta liga.</p>
+                {% endfor %}
             </div>
-        {% empty %}
-            <p>No hay jugadores asociados a esta liga.</p>
-        {% endfor %}
-    </div>
+        </div>
+        
+        <!-- Columna para Partidos -->
+        <div class="col-md-6">
+            <h3>Partidos de la Liga</h3>
 
-    <!-- Sección de Partidos de la Liga -->
-    <h3>Partidos de la Liga</h3>
-    <div class="row">
-        {% for partido in liga.partidos.all %}
-            <div class="col-md-4 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Partido del {{ partido.fecha_partido|date:"d/m/Y" }}</h5>
-                        <p class="card-text">
-                            Cancha: {{ partido.cancha }}<br>
-                            <!-- Puedes agregar más información aquí si la tenés -->
-                        </p>
+            <br></br>
+            <div class="row">
+                {% for partido in liga.partidos.all %}
+                    <div class="col-md-12 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    {{ partido.cancha }} - {{ partido.fecha_partido|date:"d/m/Y" }}
+                                </h5>
+                                <p>
+                                    <strong>Jugadores:</strong>
+                                    {% for puntaje in partido.puntajes_partidos.all %}
+                                        <span class="badge bg">{{ puntaje.jugador.apodo }}</span>
+                                    {% empty %}
+                                        <small>No hay jugadores registrados.</small>
+                                    {% endfor %}
+                                </p>
+                                <!-- Botón para ver los detalles del partido -->
+                                <a href="{% url 'ver_partido' partido.id %}" class="btn btn-primary">Ver Detalles</a>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                {% empty %}
+                    <p>No hay partidos registrados en esta liga.</p>
+                {% endfor %}
             </div>
-        {% empty %}
-            <p>No hay partidos registrados en esta liga.</p>
-        {% endfor %}
+            
+        </div>
     </div>
 </div>
 {% endblock %}

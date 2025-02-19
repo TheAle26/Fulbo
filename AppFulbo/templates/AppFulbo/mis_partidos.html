@@ -23,7 +23,7 @@
                 <td>
                     <ul class="list-unstyled mb-0">
                         {% for pp in puntaje.partido.puntajes_partidos.all %}
-                        <li>{{ pp.jugador.nombre }} {{ pp.jugador.apellido }} - {{ pp.puntaje }}</li>
+                        <li>{{ pp.jugador.apodo }}</li>
                         {% endfor %}
                     </ul>
                 </td>

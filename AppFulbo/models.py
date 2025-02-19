@@ -3,7 +3,17 @@ from django.contrib.auth.models import User  # Modelo de usuario predeterminado 
 from django.conf import settings
     
 class Liga(models.Model):
-    nombre_liga= models.CharField(max_length=15,unique=True)
+    nombre_liga = models.CharField(max_length=20, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    presidentes = models.ManyToManyField(User, related_name="ligas_presididas")  # Relación ManyToMany con los presidentes
+    # super_presidente = models.ForeignKey(
+    #     settings.AUTH_USER_MODEL,
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name="ligas_super_presididas",
+    #     help_text="El super presidente de la liga, con privilegios especiales."
+    # )    
     def __str__(self):
         return self.nombre_liga
 
@@ -14,14 +24,22 @@ class Jugador(models.Model):
         ('3', 'Mediocampista'),
         ('4', 'Delantero'),
     ]
-    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE) 
+    usuario = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     apodo = models.CharField(max_length=15)
     posicion = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
-    liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")  # Liga a la que pertenece
-
+    liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")
 
     def __str__(self):
         return f"{self.apodo} en liga {self.liga}"
+
+    class Meta:
+        unique_together = ('apodo', 'liga')
+        # O, en Django 2.2+:
+        # constraints = [
+        #     models.UniqueConstraint(fields=['apodo', 'liga'], name='unique_apodo_per_liga')
+        # ]
+ 
+
 
 class Partido(models.Model):
     fecha_partido = models.DateField(null=True, blank=True)

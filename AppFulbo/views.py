@@ -5,14 +5,10 @@ import AppFulbo.forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
-from .forms import JugadorForm,LigaForm,MiJugadorForm
-from .models import *
-from .models import Liga, Jugador,PuntajePartido
+from .forms import JugadorForm,LigaForm,MiJugadorForm,PartidoForm
+from .models import Liga, Jugador,PuntajePartido,Partido
 from django.contrib import messages
 from django.db.models import Sum
-from django.contrib.auth import logout
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
 from datetime import date
 
 def calcular_edad(fecha_nacimiento):
@@ -203,36 +199,7 @@ def elegir_o_crear_jugador(request, liga_id):
     }
     return render(request, "AppFulbo/elegir_jugador.html", context)
 
-@login_required
-def crear_jugador(request, liga_id):
-    """
-    Vista para crear un jugador nuevo para una liga específica.
-    Se asocia el jugador creado con el usuario autenticado y la liga indicada.
-    """
-    liga = get_object_or_404(Liga, id=liga_id)
 
-    # Verificar si el usuario ya tiene un jugador para esta liga
-    if Jugador.objects.filter(usuario=request.user, liga=liga).exists():
-        messages.info(request, f"Ya tienes un jugador en la liga {liga.nombre}.")
-        return redirect('mis_ligas')
-
-    if request.method == 'POST':
-        form = JugadorForm(request.POST)
-        if form.is_valid():
-            jugador = form.save(commit=False)
-            jugador.usuario = request.user  # Se asocia el jugador al usuario autenticado
-            jugador.liga = liga             # Se asigna la liga
-            jugador.save()
-            messages.success(request, f"Jugador {jugador.nombre} creado en la liga {liga.nombre}.")
-            return redirect('mis_ligas')
-    else:
-        form = JugadorForm()
-
-    context = {
-        'form': form,
-        'liga': liga,
-    }
-    return render(request, "registro/crear_jugador.html", context)
 
 
 @login_required
@@ -263,18 +230,20 @@ def mi_perfil(request):
 def crear_liga(request):
     if request.method == 'POST':
         form_liga = LigaForm(request.POST)
-        form_jugador = MiJugadorForm(request.POST)  # ya no necesitamos pasar el usuario para filtrar la liga
+        form_jugador = JugadorForm(request.POST)  # ya no necesitamos pasar el usuario para filtrar la liga
         if form_liga.is_valid() and form_jugador.is_valid():
             nueva_liga = form_liga.save()
             nuevo_jugador = form_jugador.save(commit=False)
             nuevo_jugador.usuario = request.user
             nuevo_jugador.liga = nueva_liga  # Asigna manualmente la liga recién creada
             nuevo_jugador.save()
+            nueva_liga.presidentes.add(request.user)            
+            nueva_liga.super_presidentes.add(request.user)
             messages.success(request, "Liga y jugador creados exitosamente.")
             return redirect('ver_liga', liga_id=nueva_liga.id)
     else:
         form_liga = LigaForm()
-        form_jugador = MiJugadorForm()
+        form_jugador = JugadorForm()
     return render(request, 'registro/crear_liga.html', {'form_liga': form_liga, 'form_jugador': form_jugador})
 
 def ver_liga(request, liga_id):
@@ -287,3 +256,151 @@ def ver_liga(request, liga_id):
         'mi_jugador': mi_jugador,
     }
     return render(request, 'AppFulbo/ver_liga.html', context)
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from .models import Liga, Jugador, Partido
+from .forms import LigaForm  # Formulario para editar nombre/descr, por ejemplo.
+# También podrías tener formularios específicos para jugadores, partidos, etc.
+
+def editar_liga(request, liga_id):
+    liga = get_object_or_404(Liga, id=liga_id)
+    # Obtén las relaciones
+    presidentes = liga.presidentes.all()
+    jugadores = liga.jugadores.all()
+    partidos = liga.partidos.all()
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+        # Acciones posibles:
+        if action == "editar_liga":
+            form = LigaForm(request.POST, instance=liga)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Datos de la liga actualizados.")
+            else:
+                messages.error(request, "Error al actualizar la liga.")
+        elif action == "add_president":
+            # Supongamos que el formulario trae el username del nuevo presidente.
+            nuevo_username = request.POST.get('nuevo_presidente')
+            # Aquí deberías buscar al usuario y agregarlo:
+            from django.contrib.auth.models import User
+            try:
+                nuevo_presidente = User.objects.get(username=nuevo_username)
+                liga.presidentes.add(nuevo_presidente)
+                messages.success(request, f"{nuevo_username} agregado como presidente.")
+            except User.DoesNotExist:
+                messages.error(request, "El usuario no existe.")
+        elif action == "delete_president":
+            presidente_id = request.POST.get('presidente_id')
+            # Verifica que el usuario sea el super_presidente
+            if request.user != liga.super_presidente:
+                messages.error(request, "Solo el SuperPresidente puede eliminar a los presidentes.")
+            else:
+                try:
+                    presidente = liga.presidentes.get(id=presidente_id)
+                    liga.presidentes.remove(presidente)
+                    messages.success(request, "Presidente eliminado.")
+                except Exception as e:
+                    messages.error(request, "Error al eliminar presidente.")
+        elif action == "edit_player":
+            # Aquí iría la lógica para editar un jugador
+            jugador_id = request.POST.get('jugador_id')
+            # Lógica de edición (por ejemplo, abrir formulario en otra vista o modal)
+            messages.info(request, f"Editar jugador {jugador_id}.")
+        elif action == "delete_player":
+            jugador_id = request.POST.get('jugador_id')
+            try:
+                jugador = Jugador.objects.get(id=jugador_id)
+                jugador.delete()
+                messages.success(request, "Jugador eliminado.")
+            except Exception as e:
+                messages.error(request, "Error al eliminar jugador.")
+        elif action == "edit_match":
+            # Lógica para editar partido
+            partido_id = request.POST.get('partido_id')
+            messages.info(request, f"Editar partido {partido_id}.")
+        elif action == "delete_match":
+            partido_id = request.POST.get('partido_id')
+            try:
+                partido = Partido.objects.get(id=partido_id)
+                partido.delete()
+                messages.success(request, "Partido eliminado.")
+            except Exception as e:
+                messages.error(request, "Error al eliminar partido.")
+
+        # Después de la acción, redirige a la misma vista para refrescar la información.
+        return redirect('editar_liga', liga_id=liga.id)
+
+    else:
+        # Para editar datos de la liga, inicializamos un formulario:
+        form = LigaForm(instance=liga)
+
+    context = {
+        'liga': liga,
+        'form': form,
+        'presidentes': presidentes,
+        'jugadores': jugadores,
+        'partidos': partidos,
+    }
+    return render(request, 'AppFulbo/editar_liga.html', context)
+
+
+@login_required
+def crear_jugador(request, liga_id):
+    league = get_object_or_404(Liga, id=liga_id)
+    if request.method == 'POST':
+        form = JugadorForm(request.POST, liga=league)
+        if form.is_valid():
+            nuevo_jugador = form.save(commit=False)
+            nuevo_jugador.liga = league  # Asigna la liga manualmente.
+            # Si fuera necesario asignar usuario, se podría hacer aquí, p.ej.:
+            # nuevo_jugador.usuario = request.user
+            nuevo_jugador.save()
+            messages.success(request, "Jugador creado exitosamente.")
+            return redirect('ver_liga', liga_id=league.id)
+    else:
+        form = JugadorForm(liga=league)
+    return render(request, 'registro/crear_jugador.html', {'form': form, 'liga': league})
+
+@login_required
+def crear_partido(request, liga_id):
+    # Obtenemos la liga a la que se creará el partido
+    league = get_object_or_404(Liga, id=liga_id)
+    
+    if request.method == 'POST':
+        form = PartidoForm(request.POST, league=league)
+        if form.is_valid():
+            # Creamos el objeto Partido sin guardar aún, para asignar la liga.
+            partido = form.save(commit=False)
+            partido.liga = league
+            partido.save()
+            
+            # Obtenemos la lista de jugadores que participaron.
+            jugadores_seleccionados = form.cleaned_data.get('jugadores')
+            
+            # Para cada jugador seleccionado, creamos un registro de participación (por ejemplo, PuntajePartido)
+            # Aquí se asume que puntaje se inicializa en 0.0.
+            for jugador in jugadores_seleccionados:
+                PuntajePartido.objects.create(
+                    jugador=jugador,
+                    partido=partido,
+                    puntaje=0.0
+                )
+            
+            messages.success(request, "Partido creado exitosamente.")
+            return redirect('ver_liga', liga_id=league.id)
+    else:
+        form = PartidoForm(league=league)
+    
+    return render(request, 'registro/crear_partido.html', {'form': form, 'liga': league})
+
+def ver_partido(request, partido_id):
+    partido = get_object_or_404(Partido, id=partido_id)
+    # Obtenemos los puntajes de este partido, incluyendo la información del jugador
+    puntajes = partido.puntajes_partidos.select_related('jugador').all()
+    context = {
+        'partido': partido,
+        'puntajes': puntajes,
+    }
+    return render(request, 'AppFulbo/ver_partido.html', context)

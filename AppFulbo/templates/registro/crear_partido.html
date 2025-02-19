@@ -1,0 +1,12 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Crear Partido para la Liga: {{ liga.nombre_liga }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Crear Partido</button>
+    </form>
+</div>
+{% endblock %}

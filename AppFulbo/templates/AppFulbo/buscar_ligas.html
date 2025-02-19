@@ -23,11 +23,13 @@
                     {% endif %}
                 </div>
                 <!-- Formulario para solicitar unirse a la liga -->
-                <form method="post" action="{% url 'solicitar_unirse' liga.id %}">
+                <td><a href="{% url 'ver_liga' liga.id %}">Ver liga</a></td>
+                <td><a href="{% url 'ver_liga' liga.id %}">Ver liga</a></td>
+                {% comment %} <form method="post" action="{% url 'solicitar_unirse' liga.id %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-success">Solicitar unirme</button>
-                </form>
-            </li>
+                </form>{% endcomment %}
+            </li> 
         {% endfor %}
     </ul>
 {% else %}

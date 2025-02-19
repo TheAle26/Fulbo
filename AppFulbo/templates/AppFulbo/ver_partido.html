@@ -1,0 +1,32 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Detalles del Partido</h2>
+    <p><strong>Liga:</strong> {{ partido.liga.nombre_liga }}</p>
+    <p><strong>Fecha:</strong> {{ partido.fecha_partido|date:"d/m/Y" }}</p>
+    <p><strong>Cancha:</strong> {{ partido.cancha }}</p>
+
+    <h3>Jugadores y Puntajes</h3>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
+        {% for puntaje in puntajes %}
+            <div class="col mb-3">
+                <div class="card h-100" {% if puntaje.jugador.usuario and puntaje.jugador.usuario == user %}style="border: 2px solid gold;"{% endif %}>
+
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            {{ puntaje.jugador.apodo }}
+                            <span class="badge bg-primary ms-3">Puntaje: {{ puntaje.puntaje }}</span>
+                        </h5>
+                        <p class="card-text">
+                            Posición: {{ puntaje.jugador.get_posicion_display }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>No hay jugadores registrados para este partido.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
