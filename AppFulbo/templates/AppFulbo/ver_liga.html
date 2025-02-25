@@ -9,8 +9,13 @@
     <h5>Presidentes de la Liga</h5>
 <ul>
     {% for presidente in liga.presidentes.all %}
+        {% if presidente == liga.super_presidente %}
+            <li style="color: gold;">{{ presidente.username }}</li>
+        {% else %}
         <li>{{ presidente.username }}</li>
+        {% endif %}
     {% endfor %}
+
 </ul>
     <div class="row">
         {% if mi_jugador %}
@@ -45,10 +50,11 @@
             <br></br>
             <div class="row">
                 {% for jugador in liga.jugadores.all %}
+                {% if jugador.activo %}
                     <div class="col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title">{{ jugador.apodo }}
+                                <h5 class="card-title">{{ jugador.numero }} {{ jugador.apodo }}
                                     <span class="card-text"> {{ jugador.puntaje }}</span>
                                 </h5>
                                 <p class="card-text">
@@ -57,8 +63,10 @@
                             </div>
                         </div>
                     </div>
+                {% endif %}
                 {% empty %}
                     <p>No hay jugadores asociados a esta liga.</p>
+                
                 {% endfor %}
             </div>
         </div>

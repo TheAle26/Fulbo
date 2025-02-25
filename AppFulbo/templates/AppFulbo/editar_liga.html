@@ -22,7 +22,7 @@
     </form>
     
     <hr>
-    {% if request.user == liga.super_presidente %}
+    
     <h3>Presidentes</h3>
     <!-- Listado de presidentes -->
     <ul class="list-group">
@@ -30,12 +30,27 @@
         <li class="list-group-item d-flex justify-content-between align-items-center">
             {{ presidente.username }}
             <!-- Botón para eliminar presidente -->
+            {% if request.user == liga.super_presidente %}
+            {% if presidente.id != request.user.id %}
             <form method="post" style="display:inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete_president">
                 <input type="hidden" name="presidente_id" value="{{ presidente.id }}">
                 <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar este presidente?')">Eliminar</button>
             </form>
+
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="hacer_super_presidente">
+                    <input type="hidden" name="presidente_id" value="{{ presidente.id }}">
+                    <button type="submit" style="border: 2px solid gold; font-weight: bold;" class="btn btn-danger" onclick="return confirm('¿Está seguro de hacer Super Presidente a {{presidente.username}}? Usted dejara de serlo')"><i class="fa-solid fa-crown"></i>ASCENDER</button>
+                </form>
+            {% comment %} {% elif%}
+                <input type="hidden" name="action" value="abandonar_liga">
+                <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿¿Está seguro de salir de la liga?')">Abandonar Liga</button> {% endcomment %}
+            {% endif %}
+            {% endif %}
         </li>
         {% empty %}
         <li class="list-group-item">No hay presidentes asignados.</li>
@@ -46,19 +61,34 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="add_president">
         <div class="input-group">
-            <input type="text" name="nuevo_presidente" class="form-control" placeholder="Username del nuevo presidente">
+            <input type="text" name="nuevo_presidente" class="form-control" placeholder="Buscar jugador para presidente" list="jugadores_list">
+            <datalist id="jugadores_list">
+                {% for jugador in liga.jugadores.all %}
+                    {% if jugador.usuario %}  {# Aseguramos que el jugador tenga un usuario asociado #}
+                        <option value="{{ jugador.usuario.username }}">{{ jugador.apodo }}</option>
+                    {% endif %}
+                {% endfor %}
+            </datalist>
             <button type="submit" class="btn btn-success">Agregar Presidente</button>
         </div>
     </form>
-    {% endif %}
+    
     <hr>
-    <h3>Jugadores</h3>
+
+
+    <h3>Jugadores
+         {% if request.user in liga.presidentes.all %}
+        <a class="btn btn-success" href="{% url 'crear_jugador' liga.id %}">
+            <i class="fa-solid fa-plus"></i> Agregar Jugador
+        </a>
+        {% endif %}
+    </h3>
     <div class="row">
         {% for jugador in jugadores %}
         <div class="col-md-4 mb-3">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">{{ jugador.apodo }}</h5>
+                    <h5 class="card-title">{{ jugador.numero }} {{ jugador.apodo }}</h5>
                     <p class="card-text">
                         Posición: {{ jugador.get_posicion_display }}
                     </p>
@@ -73,9 +103,15 @@
                         <!-- Botón eliminar jugador -->
                         <form method="post" style="display:inline;">
                             {% csrf_token %}
+                            {% if jugador.usuario == request.user %}
+                            <input type="hidden" name="action" value="abandonar_liga">
+                            <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿¿Está seguro de salir de la liga?')">Abandonar Liga</button>
+                            {% else %}
                             <input type="hidden" name="action" value="delete_player">
                             <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Está seguro de eliminar este jugador?')">Eliminar</button>
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿¿Está seguro de eliminar este jugadorliga?')">Eliminar</button>
+                            {% endif %}
                         </form>
                     </div>
                 </div>
@@ -87,7 +123,13 @@
     </div>
     
     <hr>
-    <h3>Partidos</h3>
+    <h3>Partidos
+        {% if request.user in liga.presidentes.all %}
+        <a class="btn btn-success" href="{% url 'crear_partido' liga.id %}">
+            <i class="fa-solid fa-plus"></i> Agregar Partido
+        </a>
+        {% endif %}
+    </h3>
     <div class="row">
         {% for partido in partidos %}
         <div class="col-md-4 mb-3">

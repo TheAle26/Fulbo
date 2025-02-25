@@ -14,10 +14,19 @@ urlpatterns = [
     path('ligas/unirse/<int:liga_id>/', views.solicitar_unirse, name='solicitar_unirse'),
     path('mis_ligas/',views.mis_ligas, name='mis_ligas'),
     path('jugador/crear/<int:liga_id>/', views.crear_jugador, name='crear_jugador'),
+    path('jugador/editar/<int:jugador_id>/', views.editar_jugador, name='editar_jugador'),
+
     path('ligas/crear/', views.crear_liga, name='crear_liga'),
     path('ligas/<int:liga_id>/', views.ver_liga, name='ver_liga'),
     path('ligas/<int:liga_id>/editar_liga', views.editar_liga, name='editar_liga'),
     path('mis_partidos/', views.partidos_jugados, name='mis_partidos'),
     path('ligas/<int:liga_id>/crear_partido/', views.crear_partido, name='crear_partido'),
     path('partido/<int:partido_id>/', views.ver_partido, name='ver_partido'),
+    
+    path('mensajes/inbox/', views.inbox, name='inbox'),
+    path('mensajes/conversacion/<int:conversacion_id>/', views.conversacion_detail, name='conversacion_detail'),
+    path('mensajes/nuevo/', views.nuevo_chat, name='nuevo_chat'),
+    
+     path('mensajes/enviar_ajax/<int:conversacion_id>/', views.enviar_mensaje_ajax, name='enviar_mensaje_ajax'),
+    path('mensajes/obtener/<int:conversacion_id>/', views.obtener_mensajes, name='obtener_mensajes'),
 ]

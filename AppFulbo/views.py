@@ -1,15 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest,HttpResponseForbidden,JsonResponse
 import datetime
 import AppFulbo.forms 
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import login, authenticate, logout,get_user_model
 from django.contrib.auth.decorators import login_required
-from .forms import JugadorForm,LigaForm,MiJugadorForm,PartidoForm
-from .models import Liga, Jugador,PuntajePartido,Partido
+from .forms import JugadorForm,LigaForm,MiJugadorForm,PartidoForm,MensajeForm
+from .models import Liga, Jugador,PuntajePartido,Partido,Mensaje, Notificacion,Conversacion
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from datetime import date
+from django.utils import timezone
 
 def calcular_edad(fecha_nacimiento):
     today = date.today()
@@ -238,7 +239,9 @@ def crear_liga(request):
             nuevo_jugador.liga = nueva_liga  # Asigna manualmente la liga recién creada
             nuevo_jugador.save()
             nueva_liga.presidentes.add(request.user)            
-            nueva_liga.super_presidentes.add(request.user)
+            nueva_liga.super_presidente = request.user
+            nueva_liga.save()
+
             messages.success(request, "Liga y jugador creados exitosamente.")
             return redirect('ver_liga', liga_id=nueva_liga.id)
     else:
@@ -257,17 +260,11 @@ def ver_liga(request, liga_id):
     }
     return render(request, 'AppFulbo/ver_liga.html', context)
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from .models import Liga, Jugador, Partido
-from .forms import LigaForm  # Formulario para editar nombre/descr, por ejemplo.
-# También podrías tener formularios específicos para jugadores, partidos, etc.
-
 def editar_liga(request, liga_id):
     liga = get_object_or_404(Liga, id=liga_id)
     # Obtén las relaciones
     presidentes = liga.presidentes.all()
-    jugadores = liga.jugadores.all()
+    jugadores = liga.jugadores.filter(activo=True)
     partidos = liga.partidos.all()
 
     if request.method == "POST":
@@ -281,16 +278,21 @@ def editar_liga(request, liga_id):
             else:
                 messages.error(request, "Error al actualizar la liga.")
         elif action == "add_president":
-            # Supongamos que el formulario trae el username del nuevo presidente.
-            nuevo_username = request.POST.get('nuevo_presidente')
-            # Aquí deberías buscar al usuario y agregarlo:
-            from django.contrib.auth.models import User
-            try:
-                nuevo_presidente = User.objects.get(username=nuevo_username)
-                liga.presidentes.add(nuevo_presidente)
-                messages.success(request, f"{nuevo_username} agregado como presidente.")
-            except User.DoesNotExist:
-                messages.error(request, "El usuario no existe.")
+            presidente_id = request.POST.get('presidente_id')
+            # Verifica que el usuario sea el super_presidente
+            if request.user != liga.super_presidente:
+                messages.error(request, "Solo el SuperPresidente puede eliminar a los presidentes.")
+            else:
+                # Supongamos que el formulario trae el username del nuevo presidente.
+                nuevo_username = request.POST.get('nuevo_presidente')
+                # Aquí deberías buscar al usuario y agregarlo:
+                from django.contrib.auth.models import User
+                try:
+                    nuevo_presidente = User.objects.get(username=nuevo_username)
+                    liga.presidentes.add(nuevo_presidente)
+                    messages.success(request, f"{nuevo_username} agregado como presidente.")
+                except User.DoesNotExist:
+                    messages.error(request, "El usuario no existe.")
         elif action == "delete_president":
             presidente_id = request.POST.get('presidente_id')
             # Verifica que el usuario sea el super_presidente
@@ -303,11 +305,26 @@ def editar_liga(request, liga_id):
                     messages.success(request, "Presidente eliminado.")
                 except Exception as e:
                     messages.error(request, "Error al eliminar presidente.")
+                    
         elif action == "edit_player":
-            # Aquí iría la lógica para editar un jugador
             jugador_id = request.POST.get('jugador_id')
-            # Lógica de edición (por ejemplo, abrir formulario en otra vista o modal)
-            messages.info(request, f"Editar jugador {jugador_id}.")
+            return redirect('editar_jugador', jugador_id=jugador_id)
+        
+        elif action == "abandonar_liga":
+            # Verifica si el usuario es el super_presidente
+            if request.user == liga.super_presidente:
+                messages.error(request, "Debes asignar a un superpresidente antes de irte.")
+            else:
+                # Elimina al usuario de la lista de presidentes
+                liga.presidentes.remove(request.user)
+                # Buscar el jugador asociado al usuario en esta liga y marcarlo como inactivo.
+                jugador = liga.jugadores.filter(usuario=request.user, activo=True).first()
+                if jugador:
+                    jugador.activo = False
+                    jugador.save()
+                messages.success(request, "Has abandonado la liga y tu jugador ha sido desactivado.")
+                return redirect('ver_liga', liga_id=liga.id)
+            
         elif action == "delete_player":
             jugador_id = request.POST.get('jugador_id')
             try:
@@ -328,6 +345,31 @@ def editar_liga(request, liga_id):
                 messages.success(request, "Partido eliminado.")
             except Exception as e:
                 messages.error(request, "Error al eliminar partido.")
+        
+        elif action == "hacer_super_presidente":
+            # Verificar que el usuario que realiza la acción sea el superpresidente actual
+            if request.user != liga.super_presidente:
+                messages.error(request, "Solo el superpresidente actual puede realizar este cambio.")
+            else:
+                nuevo_super_id = request.POST.get('presidente_id')
+                try:
+                    nuevo_super = liga.presidentes.get(id=nuevo_super_id)
+                except liga.presidentes.model.DoesNotExist:
+                    nuevo_super = None
+
+                if not nuevo_super:
+                    messages.error(request, "El presidente elegido no existe o no es válido.")
+                else:
+                    # Verificamos que el usuario elegido ya sea presidente
+                    if nuevo_super not in liga.presidentes.all():
+                        messages.error(request, "El usuario elegido debe ser presidente antes de ser designado como superpresidente.")
+                    else:
+                        # Asignamos el nuevo superpresidente y guardamos
+                        liga.super_presidente = nuevo_super
+                        liga.save()
+                        messages.success(request, f"{nuevo_super.username} ahora es el superpresidente de la liga.")
+            return redirect('editar_liga', liga_id=liga.id)
+
 
         # Después de la acción, redirige a la misma vista para refrescar la información.
         return redirect('editar_liga', liga_id=liga.id)
@@ -362,6 +404,31 @@ def crear_jugador(request, liga_id):
     else:
         form = JugadorForm(liga=league)
     return render(request, 'registro/crear_jugador.html', {'form': form, 'liga': league})
+
+
+def editar_jugador(request, jugador_id):
+    jugador = get_object_or_404(Jugador, id=jugador_id)
+    
+    # Verificar si el usuario es presidente de la liga a la que pertenece el jugador.
+    if request.user not in jugador.liga.presidentes.all():
+        return HttpResponseForbidden("No tenés permisos para editar este jugador.")
+
+    if request.method == 'POST':
+        form = JugadorForm(request.POST, instance=jugador, liga=jugador.liga)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Jugador actualizado correctamente.")
+            # Redirige a la vista de edición de la liga.
+            return redirect('editar_liga', liga_id=jugador.liga.id)
+    else:
+        form = JugadorForm(instance=jugador, liga=jugador.liga)
+    
+    context = {
+        'form': form,
+        'jugador': jugador
+    }
+    return render(request, 'AppFulbo/editar_jugador.html', context)
+
 
 @login_required
 def crear_partido(request, liga_id):
@@ -404,3 +471,102 @@ def ver_partido(request, partido_id):
         'puntajes': puntajes,
     }
     return render(request, 'AppFulbo/ver_partido.html', context)
+
+@login_required
+def inbox(request):
+    conversaciones = Conversacion.objects.filter(
+        Q(usuario1=request.user) | Q(usuario2=request.user)
+    ).order_by('-fecha_actualizacion')
+    return render(request, 'mensajes/inbox.html', {'conversaciones': conversaciones})
+
+@login_required
+def conversacion_detail(request, conversacion_id):
+    conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+    # Verificar que el usuario sea participante de la conversación
+    if request.user not in [conversacion.usuario1, conversacion.usuario2]:
+        return HttpResponseForbidden("No tenés acceso a esta conversación.")
+    mensajes = conversacion.mensajes.all().order_by('fecha_envio')
+
+    if request.method == "POST":
+        contenido = request.POST.get('contenido')
+        if contenido:
+            Mensaje.objects.create(
+                conversacion=conversacion,
+                remitente=request.user,
+                contenido=contenido
+            )
+            return redirect('conversacion_detail', conversacion_id=conversacion.id)
+    return render(request, 'mensajes/conversacion_detail.html', {
+        'conversacion': conversacion,
+        'mensajes': mensajes
+    })
+    
+
+
+def obtener_mensajes(request, conversacion_id):
+    conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+    mensajes = conversacion.mensajes.all().order_by('fecha_envio')
+    
+    mensajes_data = []
+    for mensaje in mensajes:
+        mensajes_data.append({
+            'id': mensaje.id,
+            'remitente': mensaje.remitente.username,
+            'contenido': mensaje.contenido,
+            'fecha_envio': mensaje.fecha_envio.strftime("%d/%m/%Y %H:%M")
+        })
+    return JsonResponse({'mensajes': mensajes_data})
+
+
+User = get_user_model()
+@login_required
+def nuevo_chat(request):
+    # Listamos usuarios que no sean el actual (para iniciar un chat)
+    usuarios = User.objects.exclude(id=request.user.id)
+    if request.method == "POST":
+        destinatario_id = request.POST.get('destinatario')
+        if destinatario_id:
+            destinatario = get_object_or_404(User, id=destinatario_id)
+            # Buscar conversación existente sin importar el orden.
+            conversacion = Conversacion.objects.filter(
+                Q(usuario1=request.user, usuario2=destinatario) |
+                Q(usuario1=destinatario, usuario2=request.user)
+            ).first()
+            if not conversacion:
+                # Para evitar duplicados, definí un orden, por ejemplo:
+                if request.user.id < destinatario.id:
+                    conversacion = Conversacion.objects.create(usuario1=request.user, usuario2=destinatario)
+                else:
+                    conversacion = Conversacion.objects.create(usuario1=destinatario, usuario2=request.user)
+            return redirect('conversacion_detail', conversacion_id=conversacion.id)
+    return render(request, 'mensajes/nuevo_chat.html', {'usuarios': usuarios})
+
+
+@login_required
+def enviar_mensaje_ajax(request, conversacion_id):
+    if request.method == 'POST':
+        conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+        contenido = request.POST.get('mensaje', '').strip()
+        if not contenido:
+            return JsonResponse({'error': 'El mensaje no puede estar vacío.'}, status=400)
+        
+        mensaje = Mensaje.objects.create(
+            conversacion=conversacion,
+            remitente=request.user,
+            contenido=contenido,
+            fecha_envio=timezone.now()
+        )
+        
+        # Actualizamos la fecha de actualización de la conversación
+        conversacion.fecha_actualizacion = timezone.now()
+        conversacion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje_id': mensaje.id,
+            'remitente': mensaje.remitente.username,
+            'contenido': mensaje.contenido,
+            'fecha_envio': mensaje.fecha_envio.strftime("%d/%m/%Y %H:%M")
+        })
+    else:
+        return JsonResponse({'error': 'Método no permitido.'}, status=405)

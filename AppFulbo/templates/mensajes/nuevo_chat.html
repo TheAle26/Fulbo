@@ -1,0 +1,19 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Iniciar Nuevo Chat</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="destinatario" class="form-label">Seleccioná un destinatario:</label>
+            <select name="destinatario" id="destinatario" class="form-select">
+                {% for usuario in usuarios %}
+                    <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Iniciar Chat</button>
+    </form>
+</div>
+{% endblock %}

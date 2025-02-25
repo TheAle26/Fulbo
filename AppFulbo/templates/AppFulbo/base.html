@@ -2,6 +2,8 @@
 {% load static %}
 <html lang="es">
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <meta charset="UTF-8">
     <title>Mi Proyecto Fulbo</title>
     <!-- Agrega tu CSS o frameworks (por ejemplo, Bootstrap) -->
@@ -30,6 +32,9 @@
             </ul>
             <ul class="navbar-nav">
                 {% if user.is_authenticated %}
+                <li class="nav-item mr-3">
+                    <a class="nav-link" href="{% url 'inbox' %}"><i class="fa-solid fa-envelope"></i> </a>
+                </li>
                 <li class="nav-item mr-3">
                     <a class="nav-link" href="{% url 'mi_perfil' %}">Hola, {{ user.username }}</a>
                 </li>

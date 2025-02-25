@@ -1,0 +1,23 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Mis Conversaciones</h2>
+    <ul class="list-group">
+        {% for conv in conversaciones %}
+            <li class="list-group-item">
+                <a href="{% url 'conversacion_detail' conv.id %}">
+                    {% if conv.usuario1 == request.user %}
+                        Conversación con {{ conv.usuario2.username }}
+                    {% else %}
+                        Conversación con {{ conv.usuario1.username }}
+                    {% endif %}
+                </a>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No tenés conversaciones.</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'nuevo_chat' %}" class="btn btn-primary mt-3">Nuevo Chat</a>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>  
+    {% if conversacion.usuario1 == request.user %}
+    {{ conversacion.usuario2.username }}
+    {% else %}
+    {{ conversacion.usuario1.username }}
+    {% endif %}
+    </h2>
+    
+    <div id="chat-box" style="max-height:400px; overflow-y:auto; border:1px solid #ccc; padding:10px;">
+        {% for mensaje in mensajes %}
+            <div class="d-flex {% if mensaje.remitente.username == request.user.username %} justify-content-end {% else %} justify-content-start {% endif %} mb-2">
+                <div class="p-2 border rounded {% if mensaje.remitente.username == request.user.username %} bg-primary text-white {% else %} bg-light {% endif %}" style="max-width: 75%;">
+                    <p class="mb-1">{{ mensaje.contenido }}</p>
+                    <small>{{ mensaje.fecha_envio|date:"d/m/Y H:i" }}</small>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <div class="input-group">
+            <input type="text" name="contenido" class="form-control" placeholder="Escribe tu mensaje">
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </div>
+    </form>
+</div>
+<script>
+    $(document).ready(function() {
+        var chatBox = $("#chat-box");
+        chatBox.scrollTop(chatBox[0].scrollHeight);
+    });
+</script>
+<script>
+    var currentUser = "{{ request.user.username|escapejs }}";
+    console.log("Current user:", currentUser);
+</script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function actualizarChat() {
+        $.ajax({
+            url: "{% url 'obtener_mensajes' conversacion.id %}",
+            type: "GET",
+            dataType: "json",
+            success: function(data) {
+                console.log("Respuesta JSON:", data);
+                var chatBox = $("#chat-box");
+                chatBox.empty(); // Limpiar el contenedor
+                $.each(data.mensajes, function(index, mensaje) {
+                    // Verifica que cada mensaje tenga contenido, remitente y fecha
+                    var isCurrentUser = mensaje.remitente.toLowerCase() === currentUser.toLowerCase();
+                    var html = `
+                        <div class="d-flex ${isCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-2">
+                            <div class="p-2 border rounded ${isCurrentUser ? 'bg-primary text-white' : 'bg-light'}" style="max-width: 75%;">
+                                <p class="mb-1">${mensaje.contenido}</p>
+                                <small>${mensaje.fecha_envio}</small>
+                            </div>
+                        </div>`;
+                    chatBox.append(html);
+                });
+                chatBox.scrollTop(chatBox[0].scrollHeight);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error al obtener mensajes:", error);
+            }
+        });
+    }
+    
+    setInterval(actualizarChat, 3000); // Actualiza cada 3 segundos
+</script>
+<script>
+
+    $.ajax({
+        url: "{% url 'enviar_mensaje_ajax' conversacion.id %}",
+        type: "POST",
+        data: {
+            'mensaje': mensajeTexto,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(data) {
+            $("#mensaje-input").val('');
+            actualizarChat(); // Actualiza el chat con el nuevo mensaje
+        },
+        error: function(xhr, status, error) {
+            console.error("Error al enviar mensaje:", error);
+        }
+    });
+</script>
+
+{% endblock %}

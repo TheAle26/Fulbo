@@ -1,7 +1,7 @@
 from django import forms 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Jugador, Liga,Partido
+from .models import Jugador, Liga,Partido,Mensaje,Notificacion
 from django.contrib.auth import get_user_model
 
 
@@ -46,9 +46,6 @@ class UserRegisterForm(UserCreationForm):
         ]
         help_texts = {k: "" for k in fields}
 
-
-
-
 User = get_user_model()
 
 class UserEditForm(forms.ModelForm):
@@ -86,10 +83,11 @@ class JugadorForm(forms.ModelForm):
     class Meta:
         model = Jugador
         # No incluimos el campo 'liga' porque se asignará manualmente en la vista.
-        fields = ['apodo', 'posicion']
+        fields = ['apodo', 'posicion','numero']
         labels = {
             'apodo': 'Apodo',
             'posicion': 'Posición',
+            'numero': 'Camiseta'
         }
 
     def __init__(self, *args, **kwargs):
@@ -99,10 +97,15 @@ class JugadorForm(forms.ModelForm):
 
     def clean_apodo(self):
         apodo = self.cleaned_data.get('apodo')
-        # Verifica si ya existe un jugador con este apodo en la liga actual.
-        if self.liga and Jugador.objects.filter(apodo__iexact=apodo, liga=self.liga).exists():
-            raise forms.ValidationError("Este apodo ya existe en esta liga. Por favor, elige otro.")
+        if self.liga:
+            # Excluir el jugador actual de la validación si es que existe (al editar)
+            qs = Jugador.objects.filter(apodo__iexact=apodo, liga=self.liga)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("Este apodo ya existe en esta liga. Por favor, elige otro.")
         return apodo
+
     
     help_texts = {
             'apodo': 'Ingrese un apodo único en la liga.'
@@ -186,3 +189,12 @@ class PartidoForm(forms.ModelForm):
         if league:
             # El queryset del campo 'jugadores' se limita a los jugadores de esa liga.
             self.fields['jugadores'].queryset = league.jugadores.all()
+
+class MensajeForm(forms.ModelForm):
+    class Meta:
+        model = Mensaje
+        fields = ['remitente', 'contenido']
+        widgets = {
+            'remitente': forms.Select(attrs={'class': 'form-control'}),
+            'contenido': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
