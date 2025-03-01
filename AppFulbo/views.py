@@ -6,19 +6,12 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import login, authenticate, logout,get_user_model
 from django.contrib.auth.decorators import login_required
 from .forms import JugadorForm,LigaForm,MiJugadorForm,PartidoForm,MensajeForm
-from .models import Liga, Jugador,PuntajePartido,Partido,Mensaje, Notificacion,Conversacion
+from .models import Liga, Jugador,PuntajePartido,Partido,Mensaje, Notificacion,Conversacion, SolicitudUnionLiga
 from django.contrib import messages
 from django.db.models import Sum, Q
-from datetime import date
 from django.utils import timezone
 
-def calcular_edad(fecha_nacimiento):
-    today = date.today()
-    edad = today.year - fecha_nacimiento.year
-    # Resta uno si todavía no cumplió años este año
-    if (today.month, today.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
-        edad -= 1
-    return edad
+
 
 # Create your views here.
 def inicio(request):
@@ -121,54 +114,36 @@ def mis_ligas(request):
 
 @login_required
 def buscar_ligas(request):
-    """
-    Vista para buscar ligas. Si se ingresa un query, se filtra por nombre (no sensible a mayúsculas).
-    Se muestran todas las ligas si no se ingresa nada.
-    """
-    query = request.GET.get('q', '')
-    if query:
-        ligas = Liga.objects.filter(nombre_liga__icontains=query)
-    else:
-        ligas = Liga.objects.all()
-    
-    context = {
-        'ligas': ligas,
-        'query': query,
-    }
-    return render(request, 'AppFulbo/buscar_ligas.html', context)
-
-
-@login_required
-def solicitar_unirse(request, liga_id):
     if request.method == 'POST':
-        liga = get_object_or_404(Liga, id=liga_id)
-        
-        # Verificar si el usuario ya tiene un jugador para esa liga.
-        if Jugador.objects.filter(usuario=request.user, liga=liga).exists():
-            messages.info(request, f"Ya te has unido a la liga {liga.nombre}.")
-            return redirect('mis_ligas')
-        
-        # Intentar obtener un jugador pre-creado para esa liga (sin usuario asignado).
-        jugador = Jugador.objects.filter(liga=liga, usuario__isnull=True).first()
-        if jugador:
-            jugador.usuario = request.user
-            jugador.save()
-            messages.success(request, f"Te has unido a la liga {liga.nombre} asignándote el jugador pre-creado.")
+        liga_id = request.POST.get('liga_id')
+        #ligas = Liga.objects.all()
+        #liga_elegida = ligas.get(id=liga_id)
+        liga_elegida = get_object_or_404(Liga, id=liga_id)
+        #aca creo la solicitud
+        mi_jugador = liga_elegida.jugadores.filter(usuario=request.user).first()
+        if mi_jugador:
+            messages.success(request, f"Ya estas en esta liga.")
         else:
-            # Si no hay jugador pre-creado, creamos uno nuevo.
-            jugador = Jugador.objects.create(
-                usuario=request.user,
-                liga=liga,
-                # Puedes utilizar datos del usuario o pedir al usuario que complete estos campos
-                nombre=request.user.first_name or request.user.username,
-                apellido=request.user.last_name or "",
-                # Otros campos opcionales, por ejemplo: puntaje=0.0,
-            )
-            messages.success(request, f"Te has unido a la liga {liga.nombre} creando un nuevo jugador.")
-        
-        return redirect('mis_ligas')
+            
+            if not SolicitudUnionLiga.objects.filter(usuario=request.user, liga=liga_elegida).exists():
+                SolicitudUnionLiga.objects.create(usuario=request.user, liga=liga_elegida)
+                messages.success(request, "Solicitud enviada.")
+            else:
+                messages.info(request, "Ya has solicitado unirte a esta liga.")
+        return redirect('ver_liga', liga_id=liga_elegida.id)
     else:
-        return redirect('buscar_ligas')
+        query = request.GET.get('q', '')
+        if query:
+            ligas = Liga.objects.filter(nombre_liga__icontains=query)
+        else:
+            ligas = Liga.objects.all()
+        
+        context = {
+            'ligas': ligas,
+            'query': query,
+        }
+        return render(request, 'AppFulbo/buscar_ligas.html', context)
+            
     
 @login_required
 def elegir_o_crear_jugador(request, liga_id):
@@ -541,6 +516,13 @@ def nuevo_chat(request):
             return redirect('conversacion_detail', conversacion_id=conversacion.id)
     return render(request, 'mensajes/nuevo_chat.html', {'usuarios': usuarios})
 
+@login_required
+def marcar_todas_notificaciones_ajax(request):
+    if request.method == "POST":
+        request.user.notificaciones.filter(leido=False).update(leido=True)
+        return JsonResponse({'success': True})
+    else:
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @login_required
 def enviar_mensaje_ajax(request, conversacion_id):

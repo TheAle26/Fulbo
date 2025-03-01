@@ -31,12 +31,15 @@
         </div>
     </form>
 </div>
+
+
 <script>
     $(document).ready(function() {
         var chatBox = $("#chat-box");
         chatBox.scrollTop(chatBox[0].scrollHeight);
     });
 </script>
+
 <script>
     var currentUser = "{{ request.user.username|escapejs }}";
     console.log("Current user:", currentUser);
@@ -65,7 +68,12 @@
                         </div>`;
                     chatBox.append(html);
                 });
-                chatBox.scrollTop(chatBox[0].scrollHeight);
+                var scrollPos = chatBox.scrollTop();
+                var innerHeight = chatBox.innerHeight();
+                var scrollHeight = chatBox[0].scrollHeight;
+                if (scrollPos + innerHeight >= scrollHeight - 100) {
+                    chatBox.scrollTop(chatBox[0].scrollHeight);
+                }
             },
             error: function(xhr, status, error) {
                 console.error("Error al obtener mensajes:", error);

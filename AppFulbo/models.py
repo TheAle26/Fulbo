@@ -127,3 +127,18 @@ class Notificacion(models.Model):
     def __str__(self):
         return f"Notificación para {self.usuario} - {self.mensaje}"
 
+class SolicitudUnionLiga(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='solicitudes_union',
+        on_delete=models.CASCADE
+    )
+    liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="solicitudes_union")  # Liga a la que pertenece
+
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Solicitud union: {self.usuario.username} en {self.liga}"
+
+    class Meta:
+        unique_together = ('usuario', 'liga')
