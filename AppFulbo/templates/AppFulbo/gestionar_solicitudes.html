@@ -1,0 +1,45 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Solicitudes de Unión a la Liga: {{ liga.nombre_liga }}</h2>
+    
+    {% if solicitudes %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Fecha de Solicitud</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for solicitud in solicitudes %}
+                    <tr>
+                        <td>{{ solicitud.usuario.username }}</td>
+                        <td>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <!-- Botón para aceptar la solicitud -->
+                            <form method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
+                                <input type="hidden" name="action" value="aceptar">
+                                <button type="submit" class="btn btn-success btn-sm">Asociar a Jugador</button>
+                            </form>
+                            <!-- Botón para rechazar la solicitud -->
+                            <form method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
+                                <input type="hidden" name="action" value="rechazar">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Rechazar solicitud de {{ solicitud.usuario.username }}?')">Rechazar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay solicitudes para esta liga.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -362,7 +362,86 @@ def editar_liga(request, liga_id):
     }
     return render(request, 'AppFulbo/editar_liga.html', context)
 
+def mensaje_automatico_solicitud_liga(request, user, solicitud,mensaje):
+    destinatario = solicitud.usuario
+    conversacion = Conversacion.objects.filter(
+        Q(usuario1=user, usuario2=destinatario) |
+        Q(usuario1=destinatario, usuario2=user)
+    ).first()
 
+    if not conversacion:
+        if user.id < destinatario.id:
+            conversacion = Conversacion.objects.create(usuario1=user, usuario2=destinatario)
+        else:
+            conversacion = Conversacion.objects.create(usuario1=destinatario, usuario2=user)
+
+    Mensaje.objects.create(
+        conversacion=conversacion,
+        remitente=user,
+        contenido=mensaje
+    )
+
+@login_required
+def asociar_jugador(request, solicitud_id):
+    solicitud = get_object_or_404(SolicitudUnionLiga, id=solicitud_id)
+    liga = solicitud.liga
+
+    if request.user in liga.presidentes.all():
+        jugadores = liga.jugadores.filter(usuario__isnull=True)
+        if request.method == "POST":
+            action = request.POST.get('action')
+            if action == "asociar_a_jugador":
+                jugador_id = request.POST.get('jugador_id')
+                jugador = get_object_or_404(Jugador, id=jugador_id, liga=liga)
+                jugador.usuario = solicitud.usuario
+                jugador.save()
+                solicitud.delete()
+                mensaje = f"Te acepte en la liga {liga}."
+                mensaje_automatico_solicitud_liga(request, request.user, solicitud,mensaje)
+                solicitud.delete()  # Se rechaza la solicitud eliminándola
+                messages.success(request, "Has sido asociado a la liga y al jugador seleccionado.")
+                return redirect('ver_liga', liga_id=liga.id)
+            else:
+                messages.error(request, "Opción no válida.")
+                return redirect('asociar_jugador', solicitud_id=solicitud.id)
+        else:
+
+            context = {
+                'solicitud': solicitud,
+                'liga': liga,
+                'jugadores': jugadores
+            }
+            return render(request, 'AppFulbo/agregar_a_liga.html', context)
+    
+
+
+@login_required
+def gestionar_solicitudes(request, liga_id):
+    liga = get_object_or_404(Liga, id=liga_id)
+    if request.user in liga.presidentes.all():
+        if request.method == "POST":
+            action = request.POST.get('action')
+            solicitud_id = request.POST.get('solicitud_id')
+            solicitud = get_object_or_404(SolicitudUnionLiga, id=solicitud_id, liga=liga)
+            
+            if action == "aceptar":
+                return redirect('asociar_jugador', solicitud_id=solicitud.id)
+            
+            elif action == "rechazar":
+                mensaje = f"He rechazado tu solicitud a la la liga {liga}."
+                mensaje_automatico_solicitud_liga(request, request.user, solicitud,mensaje)
+                solicitud.delete()  # Se rechaza la solicitud eliminándola
+                messages.success(request, "Solicitud rechazada.")
+            else:
+                messages.error(request, "Opción no válida.")
+            
+            return redirect('gestionar_solicitudes', liga_id=liga.id)
+        
+        else:
+            solicitudes = liga.solicitudes_union.all()
+            return render(request, 'AppFulbo/gestionar_solicitudes.html', {'solicitudes': solicitudes, 'liga': liga})
+
+        
 @login_required
 def crear_jugador(request, liga_id):
     league = get_object_or_404(Liga, id=liga_id)

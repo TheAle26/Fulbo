@@ -1,0 +1,35 @@
+{% extends 'AppFulbo/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Asociar Jugador para Solicitud de Unión</h2>
+    <p><strong>Solicitud de:</strong> {{ solicitud.usuario.username }}.</p>
+    <div class="alert alert-danger" role="alert">
+        ⚠️ ¡Atención! Esta accion es irrreversible, este seguro de a que jugador lo asocia!
+      </div>
+    <h3>Pueder crear un jugador antes de asociar el usuario.</h3> 
+    <a class="btn btn-success" href="{% url 'crear_jugador' liga.id %}">
+        <i class="fa-solid fa-plus"></i> Crear Jugador
+    </a>
+    <h2>Jugadores existentes en la liga</h2>
+    {% if jugadores %}
+        <ul class="list-group">
+            {% for jugador in jugadores %}
+                <li class="list-group-item">
+                    {{ jugador.apodo }} - {{ jugador.get_posicion_display }}
+                    <!-- Aquí podrías agregar un botón para asociar a este jugador -->
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
+                        <input type="hidden" name="jugador_id" value="{{ jugador.id }}">
+                        <input type="hidden" name="action" value="asociar_a_jugador">
+                        <button type="submit" class="btn btn-success btn-sm">Asociar</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No hay jugadores registrados en la liga. <a href="{% url 'crear_jugador' liga.id %}">Crear nuevo jugador</a></p>
+    {% endif %}
+</div>
+{% endblock %}

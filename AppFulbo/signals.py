@@ -29,10 +29,9 @@ def crear_notificacion_nuevo_mensaje(sender, instance, created, **kwargs):
 @receiver(post_save, sender=SolicitudUnionLiga)
 def crear_notificacion_nuevo_mensaje(sender, instance, created, **kwargs):
     if created:
-        usuarioS = instance.usuario
         liga = instance.liga
         # Generar la URL usando el name del path y el ID de la conversación
-        url = reverse('ver_liga', kwargs={'liga_id': liga.id})
+        url = reverse('gestionar_solicitudes', kwargs={'liga_id': liga.id})
         presidentes = liga.presidentes.all()
         for presidente in presidentes:
             Notificacion.objects.create(

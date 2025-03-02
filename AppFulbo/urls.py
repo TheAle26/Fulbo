@@ -19,8 +19,11 @@ urlpatterns = [
     path('ligas/crear/', views.crear_liga, name='crear_liga'),
     path('ligas/<int:liga_id>/', views.ver_liga, name='ver_liga'),
     path('ligas/<int:liga_id>/editar_liga', views.editar_liga, name='editar_liga'),
+    path('solicitudes/<int:solicitud_id>/asociar/', views.asociar_jugador, name='asociar_jugador'),
+
     path('mis_partidos/', views.partidos_jugados, name='mis_partidos'),
     path('ligas/<int:liga_id>/crear_partido/', views.crear_partido, name='crear_partido'),
+    path('ligas/<int:liga_id>/gestionar_solicitudes/', views.gestionar_solicitudes, name='gestionar_solicitudes'),
     path('partido/<int:partido_id>/', views.ver_partido, name='ver_partido'),
     
     path('mensajes/inbox/', views.inbox, name='inbox'),
