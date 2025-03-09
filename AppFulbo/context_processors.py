@@ -1,4 +1,3 @@
-# tu_app/context_processors.py
 from .models import Notificacion
 
 def notificaciones_context(request):

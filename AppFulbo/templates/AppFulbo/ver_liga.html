@@ -17,6 +17,9 @@
     {% endfor %}
 
 </ul>
+{% if mi_jugador.puntuacion_pendiente.all %}
+    <a href="{% url 'puntuar_jugadores_partido' partido.id %}" class="btn btn-secondary">Puntuación Pendiente</a>
+{% endif %}
     <div class="row">
         {% if mi_jugador %}
         <div class="col-md-3 mb-3">
@@ -38,10 +41,16 @@
         {% endif %}
     </div>
     {% if request.user in liga.presidentes.all %}
-    <a class="btn btn-success" href="{% url 'editar_liga' liga.id %}">
-        <i class="fa-solid fa-pencil"></i>Editar Liga
-    </a>
+        {% if solicitudes  %}
+            <a class="btn btn-success" href="{% url 'gestionar_solicitudes' liga.id %}">
+                <i class="fa-solid fa-user-cog"></i>Gestionar solicitudes de union
+            </a>
+        {% endif %}
+        <a class="btn btn-success" href="{% url 'editar_liga' liga.id %}">
+            <i class="fa-solid fa-pencil"></i>Editar Liga
+        </a>
     {% endif %}
+    
     <!-- Sección de Jugadores de la Liga -->
     <div class="row">
         <!-- Columna para Jugadores -->
@@ -51,14 +60,19 @@
             <div class="row">
                 {% for jugador in liga.jugadores.all %}
                 {% if jugador.activo %}
+
                     <div class="col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">{{ jugador.numero }} {{ jugador.apodo }}
-                                    <span class="card-text"> {{ jugador.puntaje }}</span>
+                                   
                                 </h5>
                                 <p class="card-text">
                                     Posición: {{ jugador.get_posicion_display }}
+                                </p>
+                                <p class="card-text">
+                                    
+                                    Puntaje: {{ jugador.puntaje|floatformat:2 }}
                                 </p>
                             </div>
                         </div>
@@ -77,13 +91,18 @@
 
             <br></br>
             <div class="row">
-                {% for partido in liga.partidos.all %}
+                {% for partido in partidos %}
                     <div class="col-md-12 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">
                                     {{ partido.cancha }} - {{ partido.fecha_partido|date:"d/m/Y" }}
                                 </h5>
+                                {% for puntuacion in puntuaciones_pendientes %}
+                                    {% if puntuacion.partido == partido and puntuacion.jugador == mi_jugador %}
+                                    <a href="{% url 'puntuar_jugadores_partido' partido.id puntuacion.id %}" class="btn btn-secondary">Puntuación Pendiente</a>
+                                    {% endif %}                                
+                                {% endfor %}
                                 <p>
                                     <strong>Jugadores:</strong>
                                     {% for puntaje in partido.puntajes_partidos.all %}
@@ -105,4 +124,11 @@
         </div>
     </div>
 </div>
+
+
+{% for puntuacion in puntuaciones_pendientes %}
+<p>AAA {{puntuacion}}.</p>
+{% endfor %}
+
+
 {% endblock %}

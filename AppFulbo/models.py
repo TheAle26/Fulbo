@@ -8,7 +8,7 @@ NUMERO_CHOICES = [(i, str(i)) for i in range(1, 100)]
 class Liga(models.Model):
     nombre_liga = models.CharField(max_length=20, unique=True)
     descripcion = models.TextField(blank=True, null=True)
-    presidentes = models.ManyToManyField(User, related_name="ligas_presididas",null=True)  # Relación ManyToMany con los presidentes
+    presidentes = models.ManyToManyField(User, related_name="ligas_presididas")  # Relación ManyToMany con los presidentes
     super_presidente = models.ForeignKey(
          settings.AUTH_USER_MODEL,
          on_delete=models.SET_NULL,
@@ -27,7 +27,7 @@ class Jugador(models.Model):
         ('3', 'Mediocampista'),
         ('4', 'Delantero'),
     ]
-    usuario = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE,related_name="user")
     apodo = models.CharField(max_length=15)
     posicion = models.CharField(max_length=1, choices=OPCIONES, null=True, blank=True)
     liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="jugadores")
@@ -42,6 +42,20 @@ class Jugador(models.Model):
 
     def __str__(self):
         return f"{self.apodo} en liga {self.liga}"
+    
+    def puntaje(self):
+        i = 0
+        puntos = 0
+        puntajes = self.puntajes_partidos.all()
+        for puntaje in puntajes:
+            if puntaje.puntaje != 0:
+                i=i+1
+                puntos = puntos + puntaje.puntaje()
+        try:
+            promedio = puntos/i
+        except:
+            promedio = 0 
+        return promedio
 
     class Meta:
         unique_together = ('apodo', 'liga')
@@ -63,12 +77,26 @@ class Partido(models.Model):
 class PuntajePartido(models.Model):
     jugador = models.ForeignKey(Jugador, on_delete=models.CASCADE, related_name="puntajes_partidos")
     partido = models.ForeignKey(Partido, on_delete=models.CASCADE, related_name="puntajes_partidos")
-    puntaje = models.FloatField(default=0.0)  # Puntaje del jugador en este partido
-
+    suma_puntajes = models.FloatField(null=True)  # Puntaje del jugador en este partido
+    cant_puntajes =  models.FloatField(default=0)
+    
+    def puntaje(self):
+        if self.cant_puntajes !=0:
+            puntaje= self.suma_puntajes/self.cant_puntajes
+        else:
+            puntaje = 0
+        return puntaje
+    
     def __str__(self):
         return f"{self.jugador} - {self.partido}: {self.puntaje}"
 
-
+class PuntuacionPendiente(models.Model):
+    puntaje_partido = models.ForeignKey(PuntajePartido, on_delete=models.CASCADE, related_name="puntuaciones_pendientes")
+    jugador = models.ForeignKey(Jugador, on_delete=models.CASCADE, related_name="puntuaciones_jugador")
+    partido = models.ForeignKey(Partido, on_delete=models.CASCADE, related_name="puntuaciones_pendientes")
+    liga = models.ForeignKey(Liga, on_delete=models.CASCADE, related_name="puntuaciones_pendientes")
+    
+    
 class Conversacion(models.Model):
     usuario1 = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -111,7 +139,7 @@ class Notificacion(models.Model):
     TIPO_CHOICES = [
         ('MSG', 'Mensaje'),
         ('SOL', 'Solicitud'),
-        # Podés agregar otros tipos según necesites
+        ('PP','Puntuat Partido'),
     ]
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

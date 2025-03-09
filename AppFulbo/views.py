@@ -6,7 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import login, authenticate, logout,get_user_model
 from django.contrib.auth.decorators import login_required
 from .forms import JugadorForm,LigaForm,MiJugadorForm,PartidoForm,MensajeForm
-from .models import Liga, Jugador,PuntajePartido,Partido,Mensaje, Notificacion,Conversacion, SolicitudUnionLiga
+from .models import Liga, Jugador,PuntajePartido,Partido,Mensaje, Notificacion,Conversacion, SolicitudUnionLiga, PuntuacionPendiente
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.utils import timezone
@@ -220,20 +220,35 @@ def crear_liga(request):
             messages.success(request, "Liga y jugador creados exitosamente.")
             return redirect('ver_liga', liga_id=nueva_liga.id)
     else:
-        form_liga = LigaForm()
-        form_jugador = JugadorForm()
-    return render(request, 'registro/crear_liga.html', {'form_liga': form_liga, 'form_jugador': form_jugador})
+        context = {
+            'form_liga' : LigaForm(),
+            'form_jugador' : JugadorForm(),  
+        }
+
+    return render(request, 'registro/crear_liga.html', context)
 
 def ver_liga(request, liga_id):
     liga = get_object_or_404(Liga, id=liga_id)
     mi_jugador = None
+    solicitudes = liga.solicitudes_union.all()
+    partidos = liga.partidos.all()
+
     if request.user.is_authenticated:
         mi_jugador = liga.jugadores.filter(usuario=request.user).first()
+
+    puntuaciones_pendientes = mi_jugador.puntuaciones_jugador.filter(liga=liga) if mi_jugador else None
+
+
     context = {
         'liga': liga,
         'mi_jugador': mi_jugador,
+        'solicitudes': solicitudes,
+        'partidos': partidos,
+        'puntuaciones_pendientes': puntuaciones_pendientes
     }
     return render(request, 'AppFulbo/ver_liga.html', context)
+
+
 
 def editar_liga(request, liga_id):
     liga = get_object_or_404(Liga, id=liga_id)
@@ -398,7 +413,6 @@ def asociar_jugador(request, solicitud_id):
                 solicitud.delete()
                 mensaje = f"Te acepte en la liga {liga}."
                 mensaje_automatico_solicitud_liga(request, request.user, solicitud,mensaje)
-                solicitud.delete()  # Se rechaza la solicitud eliminándola
                 messages.success(request, "Has sido asociado a la liga y al jugador seleccionado.")
                 return redirect('ver_liga', liga_id=liga.id)
             else:
@@ -516,15 +530,90 @@ def crear_partido(request, liga_id):
     
     return render(request, 'registro/crear_partido.html', {'form': form, 'liga': league})
 
+# @login_required
+# def puntuar_jugadores_partido(request, partido_id):
+#     partido = get_object_or_404(Partido, id=partido_id)
+
+#     if request.method == "POST":
+#         puntajes_partidos = partido.puntajes_partidos.all()  # Suponiendo que el modelo `Partido` tiene `jugadores`
+
+#         jugadores = []
+#         for puntaje_partido in puntajes_partidos:
+#             jugadores.append(puntaje_partido.jugador)
+            
+#         for jugador in jugadores:
+#             puntaje = request.POST.get(f'puntaje_{jugador.id}')  # Captura el puntaje ingresado
+#             if puntaje:  # Verifica que se haya ingresado un puntaje
+#                 pass
+#         del jugadores
+#         return redirect('detalle_partido', partido_id=partido.id)  # Redirige a la vista del partido
+
+#     context = {
+#         'partido': partido,
+#         'jugadores': jugadores
+#     }
+#     return render(request, 'AppFulbo/puntuar_jugadores.html', context)
+
+
+@login_required
+def puntuar_jugadores_partido(request, partido_id, puntuacion_pendiente_id):
+    partido = get_object_or_404(Partido, id=partido_id)
+    puntuacion_pendiente = get_object_or_404(PuntuacionPendiente, id=puntuacion_pendiente_id)
+
+    # Verifica que la puntuación pendiente corresponde al partido
+    if puntuacion_pendiente.partido != partido:
+        return redirect('ver_partido', partido_id=partido.id)
+
+    puntajes_partidos = partido.puntajes_partidos.all()
+    jugadores = [puntaje.jugador for puntaje in puntajes_partidos]
+    mi_jugador = next((jugador for jugador in jugadores if jugador.usuario == request.user), None)
+
+    if mi_jugador and mi_jugador.puntuaciones_jugador:
+        if request.method == "POST":
+            for puntaje_partido in puntajes_partidos:
+                jugador = puntaje_partido.jugador
+                if jugador.usuario and jugador.usuario != request.user:  # Verifica que tenga usuario y no sea el actual
+                    puntaje = request.POST.get(f'puntaje_{jugador.id}')
+                    if puntaje:  # Verifica que se haya ingresado un puntaje
+                        puntaje_partido.suma_puntajes = puntaje_partido.suma_puntajes +float(puntaje)  # Convierte a float
+                        puntaje_partido.cant_puntajes = puntaje_partido.cant_puntajes + 1
+                        puntaje_partido.save()
+
+            # Borra la puntuación pendiente solo si coincide con el partido actual
+            puntuacion_pendiente.delete()
+
+            return redirect('ver_partido', partido_id=partido.id)
+        else:
+            jugadores.remove(mi_jugador)
+            context = {
+                'partido': partido,
+                'jugadores': jugadores,
+                'puntuacion_pendiente': puntuacion_pendiente
+            }
+
+            return render(request, 'AppFulbo/puntuar_jugadores.html', context)
+    else:
+        return redirect('ver_partido', partido_id=partido.id)
+
+
+
 def ver_partido(request, partido_id):
     partido = get_object_or_404(Partido, id=partido_id)
-    # Obtenemos los puntajes de este partido, incluyendo la información del jugador
     puntajes = partido.puntajes_partidos.select_related('jugador').all()
+    mi_jugador = None
+    if request.user.is_authenticated:
+        mi_jugador = Jugador.objects.filter(usuario=request.user, liga=partido.liga).first()
+    puntuacion_pendiente = None
+    if mi_jugador:
+        puntuacion_pendiente = partido.puntuaciones_pendientes.filter(jugador_id=mi_jugador.id).first()
+
     context = {
         'partido': partido,
         'puntajes': puntajes,
+        'puntuacion_pendiente': puntuacion_pendiente,  # Ahora es un objeto, no un QuerySet
     }
     return render(request, 'AppFulbo/ver_partido.html', context)
+
 
 @login_required
 def inbox(request):

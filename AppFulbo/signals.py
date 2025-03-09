@@ -2,7 +2,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
-from .models import Mensaje, Notificacion,SolicitudUnionLiga
+from .models import Mensaje, Notificacion,SolicitudUnionLiga,PuntuacionPendiente,PuntajePartido
 from django.urls import reverse
 
 @receiver(post_save, sender=Mensaje)
@@ -27,7 +27,7 @@ def crear_notificacion_nuevo_mensaje(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=SolicitudUnionLiga)
-def crear_notificacion_nuevo_mensaje(sender, instance, created, **kwargs):
+def crear_notificacion_nueva_solicitud(sender, instance, created, **kwargs):
     if created:
         liga = instance.liga
         # Generar la URL usando el name del path y el ID de la conversación
@@ -40,3 +40,22 @@ def crear_notificacion_nuevo_mensaje(sender, instance, created, **kwargs):
                 mensaje=f"Solicitud union: {instance.usuario} en {instance.liga}",
                 url=url  # se almacena la URL completa
             )
+            
+@receiver(post_save, sender=PuntajePartido)
+def crear_puntuacion_pendiente(sender, instance, created, **kwargs):
+    if created:
+        PuntuacionPendiente.objects.create(
+            puntaje_partido=instance,
+            jugador=instance.jugador,
+            partido=instance.partido,
+            liga=instance.partido.liga
+        )
+
+        url = reverse('ver_partido', kwargs={'partido_id': instance.partido.id})
+        Notificacion.objects.create(
+            usuario=instance.jugador.usuario,
+            tipo='PP',
+            mensaje=f"Puntuación de jugadores disponible",
+            url=url
+        )
+

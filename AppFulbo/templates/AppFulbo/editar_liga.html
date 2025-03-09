@@ -56,23 +56,63 @@
         <li class="list-group-item">No hay presidentes asignados.</li>
         {% endfor %}
     </ul>
-    <!-- Formulario para agregar un presidente -->
-    <form method="post" class="mt-2">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add_president">
-        <div class="input-group">
-            <input type="text" name="nuevo_presidente" class="form-control" placeholder="Buscar jugador para presidente" list="jugadores_list">
-            <datalist id="jugadores_list">
-                {% for jugador in liga.jugadores.all %}
-                    {% if jugador.usuario %}  {# Aseguramos que el jugador tenga un usuario asociado #}
-                        <option value="{{ jugador.usuario.username }}">{{ jugador.apodo }}</option>
-                    {% endif %}
-                {% endfor %}
-            </datalist>
-            <button type="submit" class="btn btn-success">Agregar Presidente</button>
+<!-- Formulario para agregar un presidente -->
+<form method="post" class="mt-2">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_president">
+
+    <div class="input-group">
+        <input type="text" name="nuevo_presidente" class="form-control"
+               placeholder="Buscar jugador para presidente"
+               id="jugador-input" required>
+
+        <div id="opciones-filtradas" class="list-group" style="position: absolute; z-index: 100; width: 100%; display: none; margin-top: 38px;">
         </div>
-    </form>
-    
+
+        <button type="submit" class="btn btn-success">Agregar Presidente</button>
+    </div>
+</form>
+
+
+
+<script>
+    const input = document.getElementById('jugador-input');
+    const opcionesFiltradas = document.getElementById('opciones-filtradas');
+    const jugadores = [
+        {% for jugador in jugadores %}
+        {% if jugador.usuario %}
+        {% if jugador.usuario not in presidentes %}
+        { username: "{{ jugador.usuario.username }}", apodo: "{{ jugador.apodo }}" },
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    ];
+
+    input.addEventListener('input', function() {
+        const filtro = input.value.toLowerCase();
+        const opcionesFiltradasHTML = jugadores
+            .filter(jugador => jugador.username.toLowerCase().includes(filtro) || jugador.apodo.toLowerCase().includes(filtro))
+            .map(jugador => `<a href="#" class="list-group-item list-group-item-action" data-username="${jugador.username}">${jugador.apodo} (${jugador.username})</a>`)
+            .join('');
+
+        opcionesFiltradas.innerHTML = opcionesFiltradasHTML;
+        opcionesFiltradas.style.display = opcionesFiltradasHTML ? 'block' : 'none';
+    });
+
+    opcionesFiltradas.addEventListener('click', function(event) {
+        if (event.target.classList.contains('list-group-item-action')) {
+            input.value = event.target.dataset.username;
+            opcionesFiltradas.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!input.contains(event.target) && !opcionesFiltradas.contains(event.target)) {
+            opcionesFiltradas.style.display = 'none';
+        }
+    });
+</script>
+</div>
     <hr>
 
 
@@ -91,6 +131,9 @@
                     <h5 class="card-title">{{ jugador.numero }} {{ jugador.apodo }}</h5>
                     <p class="card-text">
                         Posición: {{ jugador.get_posicion_display }}
+                    </p>
+                    <p class="card-text">
+                        Usuario: {{ jugador.usuario }}
                     </p>
                     <div class="btn-group">
                         <!-- Botón editar jugador -->
